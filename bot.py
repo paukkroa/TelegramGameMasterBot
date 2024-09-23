@@ -34,6 +34,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """Send a message when the command /help is issued."""
     await update.message.reply_text("Help!")
 
+#TODO: Provide context for the LLM
 async def chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     content = update.message.text
     content.replace('/chat', '')
@@ -56,6 +57,7 @@ async def chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     logger.info(f"Bot response: {llm_response}")
     await update.message.reply_text(llm_response)
 
+# TODO: Handle generic messages according to their sender, the current context (ongoing game, group chat, etc.)
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # If the message is from a group, only respond if the bot is mentioned
     if update.message.chat.type == 'group' and '@YourBotUsername' not in update.message.text:
@@ -64,6 +66,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     msg = update.message.text
     logger.info(f"User message: {msg}")
     await update.message.reply_text(update.message.text)
+
+# TODO: Add command to start a game session with the players inside a group
+# TODO: Add command to end a game session
+# TODO: Add command to list all available games
+# TODO: Add command to start a random game with the players in a group
+# TODO: Add command to start a tournament of multiple games (random or pre-seleted)
+# TODO: Add command to insert private information about a player (player facts)
 
 """
 ___  ___  ___  _____ _   _   _     _____  ___________ 
