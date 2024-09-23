@@ -1,15 +1,26 @@
 import logging
 import os
+import db
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 import ollama
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
 
+# LOGGING
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 # set higher logging level for httpx to avoid all GET and POST requests being logged
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+
+"""
+______ _   _ _   _ _____ _____ _____ _____ _   _  _____ 
+|  ___| | | | \ | /  __ \_   _|_   _|  _  | \ | |/  ___|
+| |_  | | | |  \| | /  \/ | |   | | | | | |  \| |\ `--. 
+|  _| | | | | . ` | |     | |   | | | | | | . ` | `--. \
+| |   | |_| | |\  | \__/\ | |  _| |_\ \_/ / |\  |/\__/ /
+\_|    \___/\_| \_/\____/ \_/  \___/ \___/\_| \_/\____/                                                    
+"""
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
@@ -45,15 +56,32 @@ async def chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     logger.info(f"Bot response: {llm_response}")
     await update.message.reply_text(llm_response)
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Echo the user message."""
-    print(update.message.text)
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # If the message is from a group, only respond if the bot is mentioned
+    if update.message.chat.type == 'group' and '@YourBotUsername' not in update.message.text:
+        return
+    
+    msg = update.message.text
+    logger.info(f"User message: {msg}")
     await update.message.reply_text(update.message.text)
+
+"""
+___  ___  ___  _____ _   _   _     _____  ___________ 
+|  \/  | / _ \|_   _| \ | | | |   |  _  ||  _  | ___ \
+| .  . |/ /_\ \ | | |  \| | | |   | | | || | | | |_/ /
+| |\/| ||  _  | | | | . ` | | |   | | | || | | |  __/ 
+| |  | || | | |_| |_| |\  | | |___\ \_/ /\ \_/ / |    
+\_|  |_/\_| |_/\___/\_| \_/ \_____/\___/  \___/\_|                                                          
+"""
 
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
     application = Application.builder().token(BOT_TOKEN).build()
+
+    # Create the database connection and create the tables
+    sql_connection = db.connect()
+    db.create_tables(conn=sql_connection)
 
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
@@ -61,7 +89,7 @@ def main() -> None:
     application.add_handler(CommandHandler("chat", chat_command))
 
     # on non command i.e message - echo the message on Telegram
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
