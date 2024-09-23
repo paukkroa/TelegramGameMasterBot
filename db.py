@@ -85,6 +85,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     );
     ''')
 
+    #TODO: Add table with messages of a session
+
 def insert_player(conn: sqlite3.Connection, telegram_id: str) -> int:
     cursor = conn.cursor()
     cursor.execute(f'''
