@@ -87,7 +87,21 @@ def create_tables(conn: sqlite3.Connection) -> None:
     );
     ''')
 
-    #TODO: Add table with messages of a session
+    # Session context F_SESSION_CONTEXT
+    conn.execute('''
+    CREATE TABLE IF NOT EXISTS F_SESSION_CONTEXT (
+        session_id INTEGER NOT NULL,
+        sender_id INTEGER NOT NULL,
+        message TEXT NOT NULL,
+        message_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        iby TEXT,
+        uby TEXT,
+        idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id) REFERENCES D_SESSION(session_id),
+        FOREIGN KEY (sender_id) REFERENCES D_PLAYER(player_id)
+    );
+    ''')
 
 def insert_player(conn: sqlite3.Connection, telegram_id: str) -> int:
     cursor = conn.cursor()
@@ -197,3 +211,25 @@ def remove_points_from_player(conn: sqlite3.Connection, session_id: int, player_
     ''')
     conn.commit()
 
+def add_message_to_session_context(conn: sqlite3.Connection, session_id: int, sender_id: int, message: str) -> None:
+    cursor = conn.cursor()
+    cursor.execute('''
+    INSERT INTO F_SESSION_CONTEXT (session_id, sender_id, message) VALUES (?, ?, ?, ?)
+    ''', (session_id, sender_id, message))
+    conn.commit()
+
+def get_session_messages(conn: sqlite3.Connection, session_id: int) -> list:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT message, message_timestamp, sender_id FROM F_SESSION_CONTEXT WHERE session_id = ?
+    ''', (session_id,))
+    messages = cursor.fetchall()
+    return messages
+
+def get_messages_from_sender(conn: sqlite3.Connection, session_id: int, sender_id: int) -> list:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT message, message_timestamp, session_id FROM F_SESSION_CONTEXT WHERE session_id = ? AND sender_id = ?
+    ''', (session_id, sender_id,))
+    messages = cursor.fetchall()
+    return messages
