@@ -43,13 +43,15 @@ def create_tables(conn: sqlite3.Connection) -> None:
     );
     ''')
 
-    # Session participants F_SESSION_PLAYERS
+    # Session participants R_SESSION_PLAYERS
     conn.execute('''
     CREATE TABLE IF NOT EXISTS R_SESSION_PLAYERS (
         session_id INTEGER PRIMARY KEY,
         player_id INTEGER NOT NULL,
+        points INTEGER DEFAULT 0,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        FOREIGN KEY (player_id) REFERENCES D_PLAYER(player_id)
     );
     ''')
 
@@ -59,21 +61,21 @@ def create_tables(conn: sqlite3.Connection) -> None:
         game_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         description TEXT NOT NULL,
-        function TEXT,
+        type TEXT NOT NULL,
+        rules TEXT,
+        telegram_commands TEXT,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     ''')
 
-    # Games played in sessions F_SESSION_GAMES
+    # Games played in sessions R_SESSION_GAMES
     conn.execute('''
     CREATE TABLE IF NOT EXISTS R_SESSION_GAMES (
         session_id INTEGER NOT NULL,
         game_id INTEGER NOT NULL,
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         end_time TIMESTAMP,
-        winner_id INTEGER,
-        loser_id INTEGER,
         iby TEXT,
         uby TEXT,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -112,11 +114,11 @@ def insert_player_fact(conn: sqlite3.Connection, player_id: int, fact: str) -> i
     fact_id = cursor.lastrowid
     return fact_id
 
-def insert_game(conn: sqlite3.Connection, name: str, description: str, function: function = None) -> int:
+def insert_game(conn: sqlite3.Connection, name: str, description: str, game_type: str, rules: str = None, telegram_commands: str = None) -> int:
     cursor = conn.cursor()
-    cursor.execute(f'''
-    INSERT INTO D_GAMES (name, description, function) VALUES ({name}, {description}, {function})
-    ''')
+    cursor.execute('''
+    INSERT INTO D_GAMES (name, description, type, rules, telegram_commands) VALUES (?, ?, ?, ?, ?)
+    ''', (name, description, game_type, rules, telegram_commands))
     conn.commit()
     game_id = cursor.lastrowid
     return game_id
@@ -140,27 +142,58 @@ def end_session(conn: sqlite3.Connection, session_id: int) -> None:
 def add_player_to_session(conn: sqlite3.Connection, session_id: int, player_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
-    INSERT INTO F_SESSION_PLAYERS (session_id, player_id) VALUES ({session_id}, {player_id})
+    INSERT INTO R_SESSION_PLAYERS (session_id, player_id) VALUES ({session_id}, {player_id})
     ''')
     conn.commit()
 
 def delete_player_from_session(conn: sqlite3.Connection, session_id: int, player_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
-    DELETE FROM F_SESSION_PLAYERS WHERE session_id = {session_id} AND player_id = {player_id}
+    DELETE FROM R_SESSION_PLAYERS WHERE session_id = {session_id} AND player_id = {player_id}
     ''')
     conn.commit()
 
 def add_game_to_session(conn: sqlite3.Connection, session_id: int, game_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
-    INSERT INTO F_SESSION_GAMES (session_id, game_id) VALUES ({session_id}, {game_id})
+    INSERT INTO R_SESSION_GAMES (session_id, game_id) VALUES ({session_id}, {game_id})
     ''')
     conn.commit()
 
 def end_game_in_session(conn: sqlite3.Connection, session_id: int, game_id: int, winner_id: int, loser_id: int, iby: str) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
-    UPDATE F_SESSION_GAMES SET end_time = CURRENT_TIMESTAMP, winner_id = {winner_id}, loser_id = {loser_id}, iby = {iby} WHERE session_id = {session_id} AND game_id = {game_id}
+    UPDATE R_SESSION_GAMES SET end_time = CURRENT_TIMESTAMP, winner_id = {winner_id}, loser_id = {loser_id}, iby = {iby} WHERE session_id = {session_id} AND game_id = {game_id}
     ''')
     conn.commit()
+
+def get_player_facts(conn: sqlite3.Connection, player_id: int) -> list:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+    SELECT fact FROM R_PLAYER_FACTS WHERE player_id = {player_id}
+    ''')
+    facts = cursor.fetchall()
+    return facts
+
+def get_player_points(conn: sqlite3.Connection, session_id: int, player_id: int) -> int:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+    SELECT points FROM R_SESSION_PLAYERS WHERE session_id = {session_id} AND player_id = {player_id}
+    ''')
+    points = cursor.fetchone()
+    return points
+
+def add_points_to_player(conn: sqlite3.Connection, session_id: int, player_id: int, points: int) -> None:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+    UPDATE R_SESSION_PLAYERS SET points = points + {points} WHERE session_id = {session_id} AND player_id = {player_id}
+    ''')
+    conn.commit()
+
+def remove_points_from_player(conn: sqlite3.Connection, session_id: int, player_id: int, points: int) -> None:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+    UPDATE R_SESSION_PLAYERS SET points = points - {points} WHERE session_id = {session_id} AND player_id = {player_id}
+    ''')
+    conn.commit()
+
