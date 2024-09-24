@@ -45,7 +45,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
 
     # Session participants F_SESSION_PLAYERS
     conn.execute('''
-    CREATE TABLE IF NOT EXISTS F_SESSION_PLAYERS (
+    CREATE TABLE IF NOT EXISTS R_SESSION_PLAYERS (
         session_id INTEGER PRIMARY KEY,
         player_id INTEGER NOT NULL,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -67,7 +67,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
 
     # Games played in sessions F_SESSION_GAMES
     conn.execute('''
-    CREATE TABLE IF NOT EXISTS F_SESSION_GAMES (
+    CREATE TABLE IF NOT EXISTS R_SESSION_GAMES (
         session_id INTEGER NOT NULL,
         game_id INTEGER NOT NULL,
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

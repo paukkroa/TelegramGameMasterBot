@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 import ollama
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
+BOT_NAME = "roopentestibot"
 
 # LOGGING
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -60,7 +61,7 @@ async def chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 # TODO: Handle generic messages according to their sender, the current context (ongoing game, group chat, etc.)
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # If the message is from a group, only respond if the bot is mentioned
-    if update.message.chat.type == 'group' and '@YourBotUsername' not in update.message.text:
+    if update.message.chat.type == 'group' and f'@{BOT_NAME}' not in update.message.text:
         return
     
     msg = update.message.text
