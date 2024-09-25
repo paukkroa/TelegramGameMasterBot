@@ -257,7 +257,12 @@ def get_messages_from_sender(conn: sqlite3.Connection, session_id: int, sender_i
 def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) -> int:
     cursor = conn.cursor()
     cursor.execute('''
-    SELECT session_id FROM R_SESSION_PLAYERS WHERE player_id = ? AND ongoing = 1 ORDER BY idate DESC LIMIT 1
+    SELECT rsp.session_id 
+    FROM R_SESSION_PLAYERS rsp
+    JOIN D_SESSION ds ON rsp.session_id = ds.session_id
+    WHERE rsp.player_id = ? AND ds.ongoing = 1
+    ORDER BY ds.idate DESC 
+    LIMIT 1
     ''', (player_id,))
     try:
         session_id = cursor.fetchone()
