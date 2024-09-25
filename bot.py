@@ -165,22 +165,7 @@ async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFA
     if session_id is None:
         logger.info(f"User message does not belong to any active session")
         # Private message, respond directly
-        if update.message.chat.type != 'group':
-            response = ollama.chat(model=LLM_MODEL, messages=[
-                {
-                'role': 'system',
-                'content': SYS_PROMPT_NO_CONTEXT,
-                },
-                {
-                    'role': 'user',
-                    'content': f"User name: {sender_name}, User message: {msg}",
-                },
-            ])
-            llm_response = response['message']['content']
-            await update.message.reply_text(llm_response)
-
-        # Group message, reply to the user only if bot is mentioned
-        elif update.message.chat.type == 'group' and f'@{BOT_NAME}' in update.message.text:
+        if update.message.chat.type != 'group' or f'@{BOT_NAME}' in update.message.text:
             response = ollama.chat(model=LLM_MODEL, messages=[
                 {
                 'role': 'system',
