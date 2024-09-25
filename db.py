@@ -12,6 +12,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     conn.execute('''
     CREATE TABLE IF NOT EXISTS D_PLAYER (
         player_id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -36,6 +37,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
         host_id INTEGER NOT NULL,
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         end_time TIMESTAMP,
+        ongoing BOOLEAN DEFAULT 1,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (host_id) REFERENCES D_PLAYER(player_id)
@@ -104,11 +106,11 @@ def create_tables(conn: sqlite3.Connection) -> None:
     );
     ''')
 
-def insert_player(conn: sqlite3.Connection, telegram_id: str) -> int:
+def insert_player(conn: sqlite3.Connection, telegram_id: str, username: str) -> int:
     cursor = conn.cursor()
     cursor.execute(f'''
-    INSERT INTO D_PLAYER (player_id) VALUES ({telegram_id})
-    ''')
+    INSERT INTO D_PLAYER (player_id, username) VALUES (?, ?)
+    ''', (telegram_id, username))
     conn.commit()
     player_id = cursor.lastrowid
     return player_id
@@ -158,7 +160,7 @@ def start_session(conn: sqlite3.Connection, host_id: int) -> int:
 def end_session(conn: sqlite3.Connection, session_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
-    UPDATE D_SESSION SET end_time = CURRENT_TIMESTAMP WHERE session_id = {session_id}
+    UPDATE D_SESSION SET end_time = CURRENT_TIMESTAMP, ongoing = 0 WHERE session_id = {session_id}
     ''')
     conn.commit()
 
@@ -231,22 +233,43 @@ def remove_points_from_player(conn: sqlite3.Connection, session_id: int, player_
 def add_message_to_session_context(conn: sqlite3.Connection, session_id: int, sender_id: int, message: str) -> None:
     cursor = conn.cursor()
     cursor.execute('''
-    INSERT INTO F_SESSION_CONTEXT (session_id, sender_id, message) VALUES (?, ?, ?, ?)
+    INSERT INTO F_SESSION_CONTEXT (session_id, sender_id, message) VALUES (?, ?, ?)
     ''', (session_id, sender_id, message))
     conn.commit()
 
-def get_session_messages(conn: sqlite3.Connection, session_id: int) -> list:
+def get_session_messages(conn: sqlite3.Connection, session_id: int) -> str:
     cursor = conn.cursor()
     cursor.execute('''
-    SELECT message, message_timestamp, sender_id FROM F_SESSION_CONTEXT WHERE session_id = ?
+    SELECT dp.username, fsc.message 
+    FROM F_SESSION_CONTEXT fsc
+    JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
+    WHERE fsc.session_id = ?
     ''', (session_id,))
     messages = cursor.fetchall()
-    return messages
+    formatted_messages = ', '.join([f"{username} said: {message}" for username, message in messages])
+    return formatted_messages
 
 def get_messages_from_sender(conn: sqlite3.Connection, session_id: int, sender_id: int) -> list:
     cursor = conn.cursor()
     cursor.execute('''
-    SELECT message, message_timestamp, session_id FROM F_SESSION_CONTEXT WHERE session_id = ? AND sender_id = ?
+    SELECT message FROM F_SESSION_CONTEXT WHERE session_id = ? AND sender_id = ?
     ''', (session_id, sender_id,))
     messages = cursor.fetchall()
-    return messages
+    formatted_messages = ', '.join([f"{message}" for message in messages])
+    return formatted_messages
+
+def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) -> int:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT rsp.session_id 
+    FROM R_SESSION_PLAYERS rsp
+    JOIN D_SESSION ds ON rsp.session_id = ds.session_id
+    WHERE rsp.player_id = ? AND ds.ongoing = 1
+    ORDER BY ds.idate DESC 
+    LIMIT 1
+    ''', (player_id,))
+    try:
+        session_id = cursor.fetchone()
+        return session_id[0]
+    except:
+        return None

@@ -1,16 +1,19 @@
 import logging
 import os
-import sqlite3
-
 import db
+import ollama
+
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
-import ollama
+
 from Waitlist import Waitlist
 from Tournament import Tournament
-
 from games.GuessNumber import GuessNumber
 from games.ChallengeGame import ChallengeGame
+from games.GuessNumber import GuessNumber
+
+from llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT
+from utils import get_username_by_id
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
 BOT_NAME = "roopentestibot"
@@ -42,48 +45,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup=ForceReply(selective=True),
     )
 
+# TODO: Add list of commands and their descriptions
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
     await update.message.reply_text("Help!")
 
-#TODO: Provide context for the LLM
-async def chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    content = update.message.text
-    content.replace('/chat', '')
-    logger.info(f"User message: {content}")
-    response = ollama.chat(model='mistral', messages=[
-        {
-        'role': 'system',
-        'content': """You are a game master, master of games. 
-        You are responsible for hosting a game of DrinkDoozle, a game where the goal is to reward and punish players with drinks.
-        Be fair to each player, but if a player says a bad word to you, make sure to punish them with a drink of your choice.
-        You can also reward players with drinks for good behavior.
-        Answer sarcastically to players who ask you questions, but make sure to keep the game fun and engaging.""",
-        },
-        {
-            'role': 'user',
-            'content': content,
-        },
-    ])
-    llm_response = response['message']['content']
-    logger.info(f"Bot response: {llm_response}")
-    await update.message.reply_text(llm_response)
-
-# TODO: Handle generic messages according to their sender, the current context (ongoing game, group chat, etc.)
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # If the message is from a group, only respond if the bot is mentioned
-    if update.message.chat.type == 'group' and f'@{BOT_NAME}' not in update.message.text:
-        return
-    
-    msg = update.message.text
-    logger.info(f"User message: {msg}")
-    await update.message.reply_text(update.message.text)
-
-# TODO: Add command to start a game session with the players inside a group
-# TODO: Add command to end a game session
 # TODO: Add command to list all available games
 # TODO: Add command to start a random game with the players in a group
-# TODO: Add command to start a tournament of multiple games (random or pre-seleted)
 # TODO: Add command to insert private information about a player (player facts)
 
 async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -125,7 +93,8 @@ async def handle_join_group(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             break
 
     if not player_exists:
-        db.insert_player(sql_connection, user_id)
+        username = await get_username_by_id(user_id, context)
+        db.insert_player(sql_connection, user_id, username)
 
     await update.message.reply_text("Joined group succesfully")
 
@@ -168,6 +137,85 @@ async def handle_challenge_game_start(update: Update, context: ContextTypes.DEFA
     logger.info(f"Challenge game start")
     await game.start()
 
+# TODO: Add command to end the tournament
+
+### LLM Functions
+
+async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    msg = update.message.text
+    # Remove bot mention from the message
+    msg = msg.replace(f'@{BOT_NAME}', '')
+    sender_id = update.effective_user.id
+    sender_name = await get_username_by_id(sender_id, context)
+    session_id = db.get_most_recent_session_by_player(sql_connection, sender_id)
+
+    # No ongoing session, respond if needed
+    if session_id is None:
+        logger.info(f"User message does not belong to any active session")
+        # Private message, respond directly
+        if update.message.chat.type != 'group':
+            response = ollama.chat(model=LLM_MODEL, messages=[
+                {
+                'role': 'system',
+                'content': SYS_PROMPT_NO_CONTEXT,
+                },
+                {
+                    'role': 'user',
+                    'content': f"User name: {sender_name}, User message: {msg}",
+                },
+            ])
+            llm_response = response['message']['content']
+            await update.message.reply_text(llm_response)
+
+        # Group message, reply to the user only if bot is mentioned
+        elif update.message.chat.type == 'group' and f'@{BOT_NAME}' in update.message.text:
+            response = ollama.chat(model=LLM_MODEL, messages=[
+                {
+                'role': 'system',
+                'content': SYS_PROMPT_NO_CONTEXT,
+                },
+                {
+                    'role': 'user',
+                    'content': f"User name: {sender_name}, User message: {msg}",
+                },
+            ])
+            llm_response = response['message']['content']
+            await update.message.reply_text(llm_response)
+        
+    # Ongoing session, handle context
+    else:
+        logger.info(f"Received message with session_id: {session_id}")
+        # If the message is from a group, only respond if the bot is mentioned
+        # then we only want to add message to the context
+        if update.message.chat.type == 'group' and f'@{BOT_NAME}' in update.message.text:
+            db.add_message_to_session_context(sql_connection, session_id, update.effective_user.id, msg)
+            logger.info(f"Added message from sender ({sender_id} to session ({session_id})")
+            context = db.get_session_messages(sql_connection, session_id)
+            logger.info(f"Retrieved context from session ({session_id} to model: {context})")
+            response = ollama.chat(model=LLM_MODEL, messages=[
+                {
+                'role': 'system',
+                'content': SYS_PROMPT_WITH_CONTEXT,
+                },
+                {
+                    'role': 'user',
+                    'content': f"User name: {sender_name}, User message: {msg}, Context: {context}",
+                },
+            ])
+            llm_response = response['message']['content']
+            await update.message.reply_text(llm_response)
+
+        
+        # The bot is not mentioned but the message is from a group, add the message to the context
+        elif update.message.chat.type == 'group' and f'@{BOT_NAME}' not in update.message.text:
+            db.add_message_to_session_context(sql_connection, session_id, update.effective_user.id, msg)
+            logger.info(f"Added message from sender ({sender_id} to session ({session_id})")
+            return
+        
+        # Most likely a private message, let's not add those 
+        else:
+            logger.info("Private message, not adding to context")
+            return
 
 """
 ___  ___  ___  _____ _   _   _     _____  ___________ 
@@ -186,11 +234,10 @@ def main() -> None:
     # Create the database connection and create the tables
     db.create_tables(conn=sql_connection)
 
-    # on different commands - answer in Telegram
+    # Register the user 
     application.add_handler(CommandHandler("start", start))
+    # Help command
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("chat", chat_command))
-
     # Join single session
     application.add_handler(CommandHandler("join", handle_join_session))
     # Join group
@@ -201,18 +248,14 @@ def main() -> None:
     application.add_handler(CommandHandler("waitlist", print_waitlist))
     # Start tournament / session
     application.add_handler(CommandHandler("tournament", start_session))
-
     # Games for testing
     application.add_handler(CommandHandler("numbergame", handle_number_game_start))
     application.add_handler(CommandHandler("challenges", handle_challenge_game_start))
-
+    
     # Track users who join the group and get their ids
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_member))
-
-    # on non command i.e message - echo the message on Telegram
-    # Commented out because not really necessary and messed with my game
-    # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
+    # Handle generic messages and respond with LLM
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, generic_message_llm_handler))
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
