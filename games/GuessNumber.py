@@ -1,14 +1,18 @@
 from db import *
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
-from typing import List
+from typing import List, Callable
 import random
+
 from utils import get_username_by_id
 from games.Game import Game
 
+
 class GuessNumber(Game):
-    def __init__(self, id: int, player_ids: list, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        super().__init__(name="Guess number", id=id, player_ids=player_ids, update=update, context=context)
+    def __init__(self, id: int, player_ids: list, update: Update, context: ContextTypes.DEFAULT_TYPE,
+                 is_part_of_tournament: bool = False, start_next_game: Callable[[], None] = None):
+        super().__init__(name="Guess number", id=id, player_ids=player_ids, update=update, context=context,
+                         is_part_of_tournament=is_part_of_tournament, start_next_game=start_next_game)
         self.target_number = 0
         self.guesses = {player_id: None for player_id in player_ids}  # Track guess of each user; {id, value}
         self.winner_id = 0
@@ -66,3 +70,12 @@ class GuessNumber(Game):
             )
         else:
             await self.update.message.reply_text("We do not have a winner :(")
+
+        await self.end()
+
+    async def end(self):
+        await self.update.message.reply_text("Number game ended.")
+        self.context.application.remove_handler(MessageHandler(
+            filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, self._handle_guess)
+        )
+        await self.start_next_game()

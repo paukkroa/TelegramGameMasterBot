@@ -2,8 +2,12 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from typing import Type
 import random
+
+from utils import get_username_by_id
 from games.GuessNumber import GuessNumber
+from games.ChallengeGame import ChallengeGame
 from games.Game import Game
+from EventPoller import EventPoller
 
 class Tournament:
     def __init__(self, id: int, player_ids: list, number_of_games: int, update: Update,
@@ -13,15 +17,39 @@ class Tournament:
         self.context = context
         self.games = []
         self.number_of_games = number_of_games
+        self.current_game_index = 0
+        self.is_active = False
+        self.poller = EventPoller(30, self.player_ids, self.update, self.context)
 
-    async def start(self):
+    async def start(self) -> None:
+        self.is_active = True
         await self.draw_games()
+
+        if self.games:
+            await self.poller.start()
+            await self.start_next_game()
+
+        return
         # TEST
         await self.games[0].start()
 
+    async def start_next_game(self) -> None:
+        if self.current_game_index < len(self.games):
+            current_game = self.games[self.current_game_index]
+
+            await self.update.message.reply_text(
+                f"Starting game {self.current_game_index + 1} of {self.number_of_games}"
+            )
+            await current_game.start()
+
+            self.current_game_index += 1
+
+        else:
+            await self.end()
+
     async def draw_games(self) -> None:
         # Add games whenever they get implemented
-        game_classes = [GuessNumber]
+        game_classes = [GuessNumber, ChallengeGame]
 
         if self.number_of_games <= 0:
             await self.update.message.reply_text("Error: number of games must be greater than 0.")
@@ -52,4 +80,10 @@ class Tournament:
 
     def _create_game_instance(self, game_class: Type[Game], id: int, player_ids: list, update: Update,
                               context: ContextTypes.DEFAULT_TYPE) -> Game:
-        return game_class(id=id, player_ids=player_ids, update=update, context=context)
+        return game_class(id=id, player_ids=player_ids, is_part_of_tournament=True,
+                          start_next_game=self.start_next_game, update=update, context=context)
+
+    async def end(self):
+        self.is_active = False
+        await self.update.message.reply_text("Tournament finished!")
+        self.context.job_queue.get_jobs_by_name(self.task_name)[0].schedule_removal()

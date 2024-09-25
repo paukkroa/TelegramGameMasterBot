@@ -1,12 +1,17 @@
 import logging
 import os
 import db
+import ollama
+
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+
+from Waitlist import Waitlist
+from Tournament import Tournament
 from games.GuessNumber import GuessNumber
-from waitlist import Waitlist
-from tournament import Tournament
-import ollama
+from games.ChallengeGame import ChallengeGame
+from games.GuessNumber import GuessNumber
+
 from llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT
 from utils import get_username_by_id
 
@@ -99,11 +104,6 @@ async def list_session_players(update: Update, context: ContextTypes.DEFAULT_TYP
     players = db.get_players(sql_connection)
     await update.message.reply_text(str(players))
 
-async def handle_number_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    game = GuessNumber(id=1, player_ids=waitlist, update=update, context=context)
-    logger.info(f'Game start, id: {game.id}')
-    await game.start()
-
 async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await waitlist.list_players(update, context)
 
@@ -111,11 +111,12 @@ async def start_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     host = update.effective_user
     session_id = db.start_session(sql_connection, host.id)
 
-    for player_id in waitlist.player_ids:
-        db.add_player_to_session(sql_connection, session_id, player_id)
+    # TODO: fix
+    # for player_id in waitlist.player_ids:
+        #db.add_player_to_session(sql_connection, session_id, player_id)
 
     # TEST TOURNAMENT
-    tournament = Tournament(session_id, waitlist.player_ids, 1, update, context)
+    tournament = Tournament(session_id, waitlist.player_ids, 2, update, context)
     logger.info(f"Tournament {tournament}")
 
     waitlist.clear()
@@ -124,6 +125,17 @@ async def start_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     # TODO: implement this when needed
     # session_players = db.get_session_players(sql_connection, session_id)
+
+async def handle_number_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    game = GuessNumber(id=1, player_ids=waitlist.player_ids, update=update, context=context)
+    logger.info(f'Guess number game start')
+    await game.start()
+
+async def handle_challenge_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    game = ChallengeGame(id=1, player_ids=waitlist.player_ids, update=update, context=context)
+    game.set_rounds(5)
+    logger.info(f"Challenge game start")
+    await game.start()
 
 # TODO: Add command to end the tournament
 
@@ -236,8 +248,10 @@ def main() -> None:
     application.add_handler(CommandHandler("waitlist", print_waitlist))
     # Start tournament / session
     application.add_handler(CommandHandler("tournament", start_session))
-    # FOR TESTING
+    # Games for testing
     application.add_handler(CommandHandler("numbergame", handle_number_game_start))
+    application.add_handler(CommandHandler("challenges", handle_challenge_game_start))
+    
     # Track users who join the group and get their ids
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_member))
     # Handle generic messages and respond with LLM
