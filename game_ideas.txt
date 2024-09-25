@@ -1,0 +1,20 @@
+Truth or dare - Pelataan n. kierrosta. Jokaiselta pelaajalta kysytään truth or dare, joka pelaajan tulee suorittaa. Rankkuna 5 hörppyä.
+Exposed tyyppinen arvailu - Pelataan n. kierrosta. Valitaan kahden pelaajan välillä kumpi todennäköisimmin tyyppisiä kysymyksiä. 
+Photo roulette - Arvataan kenen kuva. Käyttäjä lähettää botille kuvia. Pitää määritellä mitä vaatii tietokannalta
+Arvaa kenen fakta - Hyödyntää R_PLAYER_FACTS taulua. Pelaajat arvaavat kenen fakta on kyseessä, jos menee oikein niin arvattava juo, jos menee väärin niin juo itse.
+Yleistietokilpailu - Perustietokilpailu. Vastaukset privana.
+Drunk Dice - Botti heittää noppaa jokaiselle vuorotellen n. kierroksen ajan. Parillisella silmäluvulla hörppy itselle, parittomalla voi antaa hörppyjä
+Yllätyshaastepeli (vähän niikun jaakon ja markuksen tikanheitto) - Botti arpoo erikoisen tehtävän pelaajalle suoritettavaksi
+Juomaruletti - Botti arpoo henkilön ryhmästä juomaan
+Kaikki juo - :D
+Kategoria-peli - Pelataan livenä. Tässä voisi olla LLM apuna esimerkiksi keksimässä kategorioita
+Musavisa - Miten toteuttaa?
+DJ-peli - jokainen pelaaja lähettää kappaleen privana, äänestetään ja eniten ääniä saanut voittaa (saa esim jakaa 15 hörppyä)
+Arvaa sana botin kuvauksesta 
+2 totuutta ja vale henkilön faktoista - Muiden pelaajien tulee arvat mikä on valetta, jos menee oikein niin arvattava juo, muuten arvaaja juo
+Shottisodat - botti lähettää pienen haasteen kahdelle pelaajalle (esim kps, matikkakysymys tms). Kumpi vastaa oikein ensin tai voittaa esim kps ei joudu juomaan ja häviäjä joutuu juomaan 
+KPS - Valitaan 2 pelaajaa ryhmästä, botti kysyy privana K/P/S (nää pitää olla kovakoodatut vaihtoehdot), pelataan esim 3 erää.
+Randomista aloitettu waterfall - Pelataan livenä
+Arvaa numero 0-100 väliltä, jos menee väärin niin huikka, voittaja saa jakaa shotteja - Jaakko teki tähän jo pohjan
+
+Ekstrafeature: Botti randomisti jopa pelien aikana käskee random pelaajaa ottamaan hörpyn. Voi perustua vaikka LLM:n päätökseen.
