@@ -248,10 +248,11 @@ def get_session_messages(conn: sqlite3.Connection, session_id: int) -> str:
 def get_messages_from_sender(conn: sqlite3.Connection, session_id: int, sender_id: int) -> list:
     cursor = conn.cursor()
     cursor.execute('''
-    SELECT message, message_timestamp, session_id FROM F_SESSION_CONTEXT WHERE session_id = ? AND sender_id = ?
+    SELECT message FROM F_SESSION_CONTEXT WHERE session_id = ? AND sender_id = ?
     ''', (session_id, sender_id,))
     messages = cursor.fetchall()
-    return messages
+    formatted_messages = ', '.join([f"{message}" for message in messages])
+    return formatted_messages
 
 def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) -> int:
     cursor = conn.cursor()
