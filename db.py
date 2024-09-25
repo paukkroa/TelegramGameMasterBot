@@ -36,6 +36,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
         host_id INTEGER NOT NULL,
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         end_time TIMESTAMP,
+        ongoing BOOLEAN DEFAULT 1,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (host_id) REFERENCES D_PLAYER(player_id)
@@ -235,13 +236,14 @@ def add_message_to_session_context(conn: sqlite3.Connection, session_id: int, se
     ''', (session_id, sender_id, message))
     conn.commit()
 
-def get_session_messages(conn: sqlite3.Connection, session_id: int) -> list:
+def get_session_messages(conn: sqlite3.Connection, session_id: int) -> str:
     cursor = conn.cursor()
     cursor.execute('''
-    SELECT message, message_timestamp, sender_id FROM F_SESSION_CONTEXT WHERE session_id = ?
+    SELECT sender_id, message FROM F_SESSION_CONTEXT WHERE session_id = ?
     ''', (session_id,))
     messages = cursor.fetchall()
-    return messages
+    formatted_messages = ', '.join([f"{sender_id} said: {message}" for sender_id, message in messages])
+    return formatted_messages
 
 def get_messages_from_sender(conn: sqlite3.Connection, session_id: int, sender_id: int) -> list:
     cursor = conn.cursor()
@@ -250,3 +252,14 @@ def get_messages_from_sender(conn: sqlite3.Connection, session_id: int, sender_i
     ''', (session_id, sender_id,))
     messages = cursor.fetchall()
     return messages
+
+def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) -> int:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT session_id FROM R_SESSION_PLAYERS WHERE player_id = ? AND ongoing = 1 ORDER BY idate DESC LIMIT 1
+    ''', (player_id,))
+    try:
+        session_id = cursor.fetchone()
+    except:
+        session_id = None
+    return session_id
