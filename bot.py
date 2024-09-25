@@ -6,7 +6,9 @@ import db
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 import ollama
-from games import GuessNumber
+from games.GuessNumber import GuessNumber
+from waitlist import Waitlist
+from tournament import Tournament
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
 BOT_NAME = "roopentestibot"
@@ -19,6 +21,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 sql_connection = db.connect()
+waitlist = Waitlist()
 
 """
 ______ _   _ _   _ _____ _____ _____ _____ _   _  _____ 
@@ -95,16 +98,22 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         db.insert_player(sql_connection, member.id)
 
 async def handle_join_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Add player into database when they send /join """
+    """Add player into waitlist when they send /join """
     user = update.effective_user
 
+    if waitlist.add_player(user.id):
+        await update.message.reply_text("Joined session succesfully")
+    else:
+        await update.message.reply_text("You have already joined the session")
+
+    return
     # TODO: Add actual session id
     db.add_player_to_session(sql_connection, 1, user.id)
-    await update.message.reply_text("Joined session succesfully")
+
 
 async def handle_join_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Add player into D_PLAYER if not exists"""
-    user_id = str(update.effective_user.id)
+    user_id = update.effective_user.id
     player_exists = False
 
     existing_players = db.get_players(sql_connection)
@@ -124,15 +133,32 @@ async def list_session_players(update: Update, context: ContextTypes.DEFAULT_TYP
     players = db.get_players(sql_connection)
     await update.message.reply_text(str(players))
 
-
 async def handle_number_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # TODO: get from actual session
-    players = db.get_players(sql_connection)
-    player_tg_ids = [player[1] for player in players]
-
-    game = GuessNumber(id=1, player_ids=player_tg_ids, update=update, context=context)
+    game = GuessNumber(id=1, player_ids=waitlist, update=update, context=context)
     logger.info(f'Game start, id: {game.id}')
     await game.start()
+
+async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await waitlist.list_players(update, context)
+
+async def start_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    host = update.effective_user
+    session_id = db.start_session(sql_connection, host.id)
+
+    for player_id in waitlist.player_ids:
+        db.add_player_to_session(sql_connection, session_id, player_id)
+
+    # TEST TOURNAMENT
+    tournament = Tournament(session_id, waitlist.player_ids, 1, update, context)
+    logger.info(f"Tournament {tournament}")
+
+    waitlist.clear()
+
+    await tournament.start()
+
+    # TODO: implement this when needed
+    # session_players = db.get_session_players(sql_connection, session_id)
+
 
 
 """
@@ -163,6 +189,10 @@ def main() -> None:
     application.add_handler(CommandHandler("addme", handle_join_group))
     # List current session players
     application.add_handler(CommandHandler("players", list_session_players))
+    # Print waitlist
+    application.add_handler(CommandHandler("waitlist", print_waitlist))
+    # Start tournament / session
+    application.add_handler(CommandHandler("tournament", start_session))
 
     # FOR TESTING
     application.add_handler(CommandHandler("numbergame", handle_number_game_start))

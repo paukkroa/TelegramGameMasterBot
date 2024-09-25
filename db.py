@@ -11,8 +11,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     # Registered players D_PLAYER
     conn.execute('''
     CREATE TABLE IF NOT EXISTS D_PLAYER (
-        player_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        telegram_id TEXT NOT NULL,
+        player_id INTEGER PRIMARY KEY,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -108,7 +107,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
 def insert_player(conn: sqlite3.Connection, telegram_id: str) -> int:
     cursor = conn.cursor()
     cursor.execute(f'''
-    INSERT INTO D_PLAYER (telegram_id) VALUES ({telegram_id})
+    INSERT INTO D_PLAYER (player_id) VALUES ({telegram_id})
     ''')
     conn.commit()
     player_id = cursor.lastrowid
@@ -117,10 +116,10 @@ def insert_player(conn: sqlite3.Connection, telegram_id: str) -> int:
 def get_players(conn: sqlite3.Connection) -> list:
     cursor = conn.cursor()
     cursor.execute(f'''
-    SELECT player_id, telegram_id FROM D_PLAYER 
+    SELECT player_id FROM D_PLAYER 
     ''')
-    players = cursor.fetchall()
-    return players
+    player_ids = cursor.fetchall()
+    return player_ids
 
 def insert_player_fact(conn: sqlite3.Connection, player_id: int, fact: str) -> int:
     cursor = conn.cursor()
@@ -176,6 +175,14 @@ def delete_player_from_session(conn: sqlite3.Connection, session_id: int, player
     DELETE FROM R_SESSION_PLAYERS WHERE session_id = {session_id} AND player_id = {player_id}
     ''')
     conn.commit()
+
+def get_session_players(conn: sqlite3.Connection, session_id: int) -> list:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+    SELECT player_id FROM R_SESSION_PLAYERS WHERE session_id = {session_id}
+    ''')
+    player_ids = cursor.fetchall()
+    return player_ids
 
 def add_game_to_session(conn: sqlite3.Connection, session_id: int, game_id: int) -> None:
     cursor = conn.cursor()

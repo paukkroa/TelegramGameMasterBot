@@ -1,39 +1,17 @@
 from db import *
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
-from telegram.error import BadRequest
 from typing import List
 import random
-
-
-# TODO: move this func somewhere
-async def get_username_by_id(user_id: str, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        user = await context.bot.get_chat(user_id)
-        username = user.username if user.username else "Incognito user"
-        return username
-    except BadRequest:
-        return "Null"
-
-
-class Game:
-    def __init__(self, name: str, id: int, player_ids: List[str], update: Update, context: ContextTypes.DEFAULT_TYPE):
-        self.name = name
-        self.id = id
-        self.player_ids = player_ids
-        self.update = update
-        self.context = context
-
-    async def start(self):
-        await self.update.message.reply_text(f"Let's play {self.name}!")
-
+from utils import get_username_by_id
+from games.Game import Game
 
 class GuessNumber(Game):
-    def __init__(self, id: int, player_ids: List[str], update: Update, context: ContextTypes.DEFAULT_TYPE):
+    def __init__(self, id: int, player_ids: list, update: Update, context: ContextTypes.DEFAULT_TYPE):
         super().__init__(name="Guess number", id=id, player_ids=player_ids, update=update, context=context)
         self.target_number = 0
         self.guesses = {player_id: None for player_id in player_ids}  # Track guess of each user; {id, value}
-        self.winner_id = ""
+        self.winner_id = 0
 
     async def start(self):
         await self.update.message.reply_text(f"Let's play number game!")
@@ -51,7 +29,7 @@ class GuessNumber(Game):
         self.target_number = random.randint(1, 20)
 
     async def _handle_guess(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = str(update.effective_user.id)
+        user_id = update.effective_user.id
         guess = update.message.text
 
         try:
