@@ -1,18 +1,27 @@
 import logging
 import os
+import sqlite3
+
 import db
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 import ollama
+from games.GuessNumber import GuessNumber
+from waitlist import Waitlist
+from tournament import Tournament
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
 BOT_NAME = "roopentestibot"
+BOT_TG_ID = os.environ['TEST_BOT_ID']
 
 # LOGGING
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 # set higher logging level for httpx to avoid all GET and POST requests being logged
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+
+sql_connection = db.connect()
+waitlist = Waitlist()
 
 """
 ______ _   _ _   _ _____ _____ _____ _____ _   _  _____ 
@@ -75,6 +84,83 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 # TODO: Add command to start a tournament of multiple games (random or pre-seleted)
 # TODO: Add command to insert private information about a player (player facts)
 
+async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Add member into D_PLAYER automatically when they join the group"""
+    for member in update.message.new_chat_members:
+
+        # Exclude the bot (otherwise it adds itself to the game :D)
+        if member.id == BOT_TG_ID:
+            continue
+
+        logger.info(f"New member joined: {member.username}, ID: {member.id}")
+        await update.message.reply_text(f"Welcome {member.first_name}")
+
+        db.insert_player(sql_connection, member.id)
+
+async def handle_join_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Add player into waitlist when they send /join """
+    user = update.effective_user
+
+    if waitlist.add_player(user.id):
+        await update.message.reply_text("Joined session succesfully")
+    else:
+        await update.message.reply_text("You have already joined the session")
+
+    return
+    # TODO: Add actual session id
+    db.add_player_to_session(sql_connection, 1, user.id)
+
+
+async def handle_join_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Add player into D_PLAYER if not exists"""
+    user_id = update.effective_user.id
+    player_exists = False
+
+    existing_players = db.get_players(sql_connection)
+    for player in existing_players:
+        if player[1] == user_id:
+            player_exists = True
+            break
+
+    if not player_exists:
+        db.insert_player(sql_connection, user_id)
+
+    await update.message.reply_text("Joined group succesfully")
+
+async def list_session_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a list of players for current session"""
+    # TODO: get from actual session and make response cleaner
+    players = db.get_players(sql_connection)
+    await update.message.reply_text(str(players))
+
+async def handle_number_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    game = GuessNumber(id=1, player_ids=waitlist, update=update, context=context)
+    logger.info(f'Game start, id: {game.id}')
+    await game.start()
+
+async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await waitlist.list_players(update, context)
+
+async def start_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    host = update.effective_user
+    session_id = db.start_session(sql_connection, host.id)
+
+    for player_id in waitlist.player_ids:
+        db.add_player_to_session(sql_connection, session_id, player_id)
+
+    # TEST TOURNAMENT
+    tournament = Tournament(session_id, waitlist.player_ids, 1, update, context)
+    logger.info(f"Tournament {tournament}")
+
+    waitlist.clear()
+
+    await tournament.start()
+
+    # TODO: implement this when needed
+    # session_players = db.get_session_players(sql_connection, session_id)
+
+
+
 """
 ___  ___  ___  _____ _   _   _     _____  ___________ 
 |  \/  | / _ \|_   _| \ | | | |   |  _  ||  _  | ___ \
@@ -90,7 +176,6 @@ def main() -> None:
     application = Application.builder().token(BOT_TOKEN).build()
 
     # Create the database connection and create the tables
-    sql_connection = db.connect()
     db.create_tables(conn=sql_connection)
 
     # on different commands - answer in Telegram
@@ -98,8 +183,26 @@ def main() -> None:
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("chat", chat_command))
 
+    # Join single session
+    application.add_handler(CommandHandler("join", handle_join_session))
+    # Join group
+    application.add_handler(CommandHandler("addme", handle_join_group))
+    # List current session players
+    application.add_handler(CommandHandler("players", list_session_players))
+    # Print waitlist
+    application.add_handler(CommandHandler("waitlist", print_waitlist))
+    # Start tournament / session
+    application.add_handler(CommandHandler("tournament", start_session))
+
+    # FOR TESTING
+    application.add_handler(CommandHandler("numbergame", handle_number_game_start))
+
+    # Track users who join the group and get their ids
+    application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_member))
+
     # on non command i.e message - echo the message on Telegram
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    # Commented out because not really necessary and messed with my game
+    # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)

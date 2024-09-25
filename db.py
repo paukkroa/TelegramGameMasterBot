@@ -11,8 +11,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     # Registered players D_PLAYER
     conn.execute('''
     CREATE TABLE IF NOT EXISTS D_PLAYER (
-        player_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        telegram_id TEXT NOT NULL,
+        player_id INTEGER PRIMARY KEY,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -50,7 +49,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
         player_id INTEGER NOT NULL,
         points INTEGER DEFAULT 0,
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (player_id) REFERENCES D_PLAYER(player_id)
     );
     ''')
@@ -74,6 +73,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     CREATE TABLE IF NOT EXISTS R_SESSION_GAMES (
         session_id INTEGER NOT NULL,
         game_id INTEGER NOT NULL,
+        winner_id INTEGER NOT NULL,
+        loser_id INTEGER NOT NULL,
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         end_time TIMESTAMP,
         iby TEXT,
@@ -106,11 +107,19 @@ def create_tables(conn: sqlite3.Connection) -> None:
 def insert_player(conn: sqlite3.Connection, telegram_id: str) -> int:
     cursor = conn.cursor()
     cursor.execute(f'''
-    INSERT INTO D_PLAYER (telegram_id) VALUES ({telegram_id})
+    INSERT INTO D_PLAYER (player_id) VALUES ({telegram_id})
     ''')
     conn.commit()
     player_id = cursor.lastrowid
     return player_id
+
+def get_players(conn: sqlite3.Connection) -> list:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+    SELECT player_id FROM D_PLAYER 
+    ''')
+    player_ids = cursor.fetchall()
+    return player_ids
 
 def insert_player_fact(conn: sqlite3.Connection, player_id: int, fact: str) -> int:
     cursor = conn.cursor()
@@ -166,6 +175,14 @@ def delete_player_from_session(conn: sqlite3.Connection, session_id: int, player
     DELETE FROM R_SESSION_PLAYERS WHERE session_id = {session_id} AND player_id = {player_id}
     ''')
     conn.commit()
+
+def get_session_players(conn: sqlite3.Connection, session_id: int) -> list:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+    SELECT player_id FROM R_SESSION_PLAYERS WHERE session_id = {session_id}
+    ''')
+    player_ids = cursor.fetchall()
+    return player_ids
 
 def add_game_to_session(conn: sqlite3.Connection, session_id: int, game_id: int) -> None:
     cursor = conn.cursor()
