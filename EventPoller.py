@@ -14,6 +14,10 @@ class EventPoller:
         self.context = context
         self.task_name = "Random event"
         self.player_ids = player_ids
+        self.chat_id = self.update.effective_chat.id
+
+    async def send_group_chat(self, message: str):
+        await self.context.bot.send_message(chat_id=self.chat_id, text=message)
 
     async def start(self):
         """Start polling"""
@@ -32,10 +36,10 @@ class EventPoller:
 
             phrase = random.sample(all_phrases, 1)[0]
             challenge = random.sample(challenges_easy, 1)[0]
-            await self.update.message.reply_text(f"{phrase} \n{username}, {challenge}!")
+            await self.send_group_chat(f"{phrase} \n\n{username}, {challenge}!")
 
         else:
             print("No event triggered this time.")
 
-    async def end(self):
+    def end(self):
         self.context.job_queue.get_jobs_by_name(self.task_name)[0].schedule_removal()

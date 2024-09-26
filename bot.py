@@ -107,20 +107,26 @@ async def list_session_players(update: Update, context: ContextTypes.DEFAULT_TYP
 async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await waitlist.list_players(update, context)
 
-async def start_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     host = update.effective_user
     session_id = db.start_session(sql_connection, host.id)
+    msg_words = update.message.text.split(' ')
 
-    # TODO: fix
-    # for player_id in waitlist.player_ids:
-        #db.add_player_to_session(sql_connection, session_id, player_id)
+    try:
+        number_of_games = int(msg_words[1])
+    except ValueError:
+        number_of_games = 5
 
-    # TEST TOURNAMENT
-    tournament = Tournament(session_id, waitlist.player_ids, 2, update, context)
+    logger.info(f"Tournament games: {number_of_games}")
+
+    # TODO: fix? should work though
+    for player_id in waitlist.player_ids:
+        db.add_player_to_session(sql_connection, session_id, player_id)
+
+    tournament = Tournament(session_id, waitlist.player_ids, number_of_games, update, context)
     logger.info(f"Tournament {tournament}")
 
     waitlist.clear()
-
     await tournament.start()
 
     # TODO: implement this when needed
@@ -226,6 +232,10 @@ ___  ___  ___  _____ _   _   _     _____  ___________
 \_|  |_/\_| |_/\___/\_| \_/ \_____/\___/  \___/\_|                                                          
 """
 
+async def TEMP_MESSAGE_FUNCTION(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    msg = update.message.text
+    logger.info(f"User msg: {msg}")
+
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
@@ -247,17 +257,20 @@ def main() -> None:
     # Print waitlist
     application.add_handler(CommandHandler("waitlist", print_waitlist))
     # Start tournament / session
-    application.add_handler(CommandHandler("tournament", start_session))
+    application.add_handler(CommandHandler("tournament", start_tournament))
     # Games for testing
     application.add_handler(CommandHandler("numbergame", handle_number_game_start))
     application.add_handler(CommandHandler("challenges", handle_challenge_game_start))
     
     # Track users who join the group and get their ids
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_member))
-    # Handle generic messages and respond with LLM
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, generic_message_llm_handler))
+    # Handle generic group messages and respond with LLM
+    application.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND & ~filters.ChatType.PRIVATE, generic_message_llm_handler)
+    )
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
+
 
 
 if __name__ == "__main__":

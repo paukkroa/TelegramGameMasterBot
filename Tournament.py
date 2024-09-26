@@ -6,6 +6,7 @@ import random
 from utils import get_username_by_id
 from games.GuessNumber import GuessNumber
 from games.ChallengeGame import ChallengeGame
+from games.Waterfall import Waterfall
 from games.Game import Game
 from EventPoller import EventPoller
 
@@ -20,6 +21,11 @@ class Tournament:
         self.current_game_index = 0
         self.is_active = False
         self.poller = EventPoller(30, self.player_ids, self.update, self.context)
+        self.handlers = []
+        self.chat_id = self.update.effective_chat.id
+
+    async def send_group_chat(self, message: str):
+        await self.context.bot.send_message(chat_id=self.chat_id, text=message)
 
     async def start(self) -> None:
         self.is_active = True
@@ -37,9 +43,7 @@ class Tournament:
         if self.current_game_index < len(self.games):
             current_game = self.games[self.current_game_index]
 
-            await self.update.message.reply_text(
-                f"Starting game {self.current_game_index + 1} of {self.number_of_games}"
-            )
+            await self.send_group_chat(f"Starting game {self.current_game_index + 1} of {self.number_of_games}")
             await current_game.start()
 
             self.current_game_index += 1
@@ -49,19 +53,18 @@ class Tournament:
 
     async def draw_games(self) -> None:
         # Add games whenever they get implemented
-        game_classes = [GuessNumber, ChallengeGame]
+        game_classes = [GuessNumber, ChallengeGame, Waterfall]
 
         if self.number_of_games <= 0:
-            await self.update.message.reply_text("Error: number of games must be greater than 0.")
+            await self.send_group_chat("Error: number of games must be greater than 0.")
             return
 
         if self.number_of_games > len(game_classes):
-            await self.update.message.reply_text("Warning: selected number of games is greater than available"
-                                                 " games")
+            await self.send_group_chat("Warning: selected number of games is greater than available games")
             self.number_of_games = len(game_classes)
 
         if self.number_of_games == 0:
-            await self.update.message.reply_text("Error: no games selected")
+            await self.send_group_chat("Error: no games selected")
             return
 
         selected_games = random.sample(game_classes, self.number_of_games)
@@ -73,7 +76,7 @@ class Tournament:
             self.games.append(game_instance)
             counter += 1
 
-        await self.update.message.reply_text(f"Created {len(self.games)} games")
+        await self.send_group_chat(f"Created {len(self.games)} games")
 
     def set_games(self, games: list) -> None:
         self.games = games
@@ -85,5 +88,5 @@ class Tournament:
 
     async def end(self):
         self.is_active = False
-        await self.update.message.reply_text("Tournament finished!")
-        self.context.job_queue.get_jobs_by_name(self.task_name)[0].schedule_removal()
+        await self.send_group_chat("Tournament finished!")
+        self.poller.end()

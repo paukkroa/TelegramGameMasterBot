@@ -18,16 +18,18 @@ class GuessNumber(Game):
         self.winner_id = 0
 
     async def start(self):
-        await self.update.message.reply_text(f"Let's play number game!")
+        await self.send_group_chat(f"Let's play number game!")
         self._draw_number()
 
         for player_id in self.player_ids:
-            await self.context.bot.send_message(chat_id=player_id, text="Guess a number between 1 and 20")
+            await self.send_player_chat(player_id, "Guess a number between 1 and 20")
 
         # Poll for answers in private messages
-        self.context.application.add_handler(MessageHandler(
-            filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, self._handle_guess)
-        )
+        self.handlers.append(MessageHandler(
+            filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, self._handle_guess
+        ))
+
+        self.add_handlers()
 
     def _draw_number(self):
         self.target_number = random.randint(1, 20)
@@ -64,18 +66,19 @@ class GuessNumber(Game):
 
         if closest_user_id != "":
             username = await get_username_by_id(closest_user_id, self.context)
-            await self.update.message.reply_text(
+            await self.send_group_chat(
                 f"Winner is {username}! Secret number was {self.target_number} and they guessed"
                 f" {closest_guess}"
             )
+
         else:
-            await self.update.message.reply_text("We do not have a winner :(")
+            await self.send_group_chat("We do not have a winner :(")
 
         await self.end()
 
     async def end(self):
-        await self.update.message.reply_text("Number game ended.")
-        self.context.application.remove_handler(MessageHandler(
-            filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, self._handle_guess)
-        )
-        await self.start_next_game()
+        await self.send_group_chat("Number game ended.")
+        self.remove_handlers()
+
+        if self.is_part_of_tournament:
+            await self.start_next_game()

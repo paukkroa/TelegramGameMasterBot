@@ -17,10 +17,11 @@ class ChallengeGame(Game):
         self.current_challenge_number = 1
 
     async def start(self):
-        await self.update.message.reply_text("Let's play random challenges!")
-        await self.update.message.reply_text("Send /next whenever you are ready for the next challenge")
+        await self.send_group_chat("Let's play random challenges!")
+        await self.send_group_chat("Send /next whenever you are ready for the next challenge")
 
-        self.context.application.add_handler(CommandHandler("next", self.get_next_challenge))
+        self.handlers.append(CommandHandler("next", self.get_next_challenge))
+        self.add_handlers()
 
     def set_rounds(self, rounds: int):
         self.rounds = rounds
@@ -38,16 +39,17 @@ class ChallengeGame(Game):
         user_id = self.player_ids[user_index]
 
         username = await get_username_by_id(user_id, context)
-        await update.message.reply_text(f"Player: {username} \nChallenge: {challenge}")
+        await self.send_group_chat(f"Player: {username} \nChallenge: {challenge}")
 
         self.current_challenge_number += 1
 
     async def end(self):
-        """End game and remove command handler"""
-        await self.update.message.reply_text("Congratulations, game ended.")
-        self.context.application.remove_handler(CommandHandler("next", self.get_next_challenge))
+        """End game and remove command handlers"""
+        await self.send_group_chat("Congratulations, game ended.")
+        self.remove_handlers()
 
         self.current_challenge_number = 1
         self.challenges.clear()
 
-        await self.start_next_game()
+        if self.is_part_of_tournament:
+            await self.start_next_game()
