@@ -9,6 +9,7 @@ from games.ChallengeGame import ChallengeGame
 from games.Waterfall import Waterfall
 from games.Game import Game
 from EventPoller import EventPoller
+import db
 
 class Tournament:
     def __init__(self, id: int, player_ids: list, number_of_games: int, update: Update,
@@ -88,5 +89,16 @@ class Tournament:
 
     async def end(self):
         self.is_active = False
+
+        """End the current session"""
+        sql_connection = db.connect()
+        user = self.update.effective_user
+        session_id = db.get_most_recent_session_by_player(sql_connection, user.id)
+
+        if session_id is None:
+            print("No active session found to end.")
+
+        db.end_session(sql_connection, session_id)
+        db.close_connection(sql_connection)
         await self.send_group_chat("Tournament finished!")
         self.poller.end()
