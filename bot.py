@@ -17,7 +17,7 @@ from utils import get_username_by_id
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
 BOT_NAME = "roopentestibot"
-BOT_TG_ID = os.environ['TEST_BOT_ID']
+BOT_TG_ID_STR = str(os.environ['TEST_BOT_ID'])
 
 # LOGGING
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -59,7 +59,7 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     for member in update.message.new_chat_members:
 
         # Exclude the bot (otherwise it adds itself to the game :D)
-        if member.id == BOT_TG_ID:
+        if str(member.id) == BOT_TG_ID_STR:
             continue
 
         logger.info(f"New member joined: {member.username}, ID: {member.id}")
