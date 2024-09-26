@@ -232,10 +232,6 @@ ___  ___  ___  _____ _   _   _     _____  ___________
 \_|  |_/\_| |_/\___/\_| \_/ \_____/\___/  \___/\_|                                                          
 """
 
-async def TEMP_MESSAGE_FUNCTION(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    msg = update.message.text
-    logger.info(f"User msg: {msg}")
-
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
