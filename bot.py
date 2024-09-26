@@ -17,7 +17,7 @@ from utils import get_username_by_id
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
 BOT_NAME = "roopentestibot"
-BOT_TG_ID = os.environ['TEST_BOT_ID']
+BOT_TG_ID_STR = str(os.environ['TEST_BOT_ID'])
 
 # LOGGING
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -59,7 +59,7 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     for member in update.message.new_chat_members:
 
         # Exclude the bot (otherwise it adds itself to the game :D)
-        if member.id == BOT_TG_ID:
+        if str(member.id) == BOT_TG_ID_STR:
             continue
 
         logger.info(f"New member joined: {member.username}, ID: {member.id}")
@@ -107,20 +107,27 @@ async def list_session_players(update: Update, context: ContextTypes.DEFAULT_TYP
 async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await waitlist.list_players(update, context)
 
-async def start_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     host = update.effective_user
     session_id = db.start_session(sql_connection, host.id)
+    # Add extra empty char to list to prevent index out of range error
+    msg_words = update.message.text.split(' ') + ['']
 
-    # TODO: fix
-    # for player_id in waitlist.player_ids:
-        #db.add_player_to_session(sql_connection, session_id, player_id)
+    try:
+        number_of_games = int(msg_words[1])
+    except ValueError:
+        number_of_games = 5
 
-    # TEST TOURNAMENT
-    tournament = Tournament(session_id, waitlist.player_ids, 2, update, context)
+    logger.info(f"Tournament games: {number_of_games}")
+
+    # TODO: fix? should work though
+    for player_id in waitlist.player_ids:
+        db.add_player_to_session(sql_connection, session_id, player_id)
+
+    tournament = Tournament(session_id, waitlist.player_ids, number_of_games, update, context)
     logger.info(f"Tournament {tournament}")
 
     waitlist.clear()
-
     await tournament.start()
 
     # TODO: implement this when needed
@@ -244,7 +251,7 @@ def main() -> None:
     # Print waitlist
     application.add_handler(CommandHandler("waitlist", print_waitlist))
     # Start tournament / session
-    application.add_handler(CommandHandler("tournament", start_session))
+    application.add_handler(CommandHandler("tournament", start_tournament))
     # end tournament / session
     application.add_handler(CommandHandler("force_end", end_session))
     # Games for testing
@@ -253,10 +260,13 @@ def main() -> None:
     
     # Track users who join the group and get their ids
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_member))
-    # Handle generic messages and respond with LLM
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, generic_message_llm_handler))
+    # Handle generic group messages and respond with LLM
+    application.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND & ~filters.ChatType.PRIVATE, generic_message_llm_handler)
+    )
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
+
 
 
 if __name__ == "__main__":

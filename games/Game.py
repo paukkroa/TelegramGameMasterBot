@@ -12,8 +12,22 @@ class Game:
         self.update = update
         self.context = context
         self.start_next_game = start_next_game
+        self.handlers = []
+        self.chat_id = self.update.effective_chat.id
 
     async def start(self):
-        await self.update.message.reply_text(f"Let's play {self.name}!")
+        await self.send_chat(f"Let's play {self.name}!")
 
+    async def send_group_chat(self, message: str):
+        await self.context.bot.send_message(chat_id=self.chat_id, text=message)
 
+    async def send_player_chat(self, user_id: int, message: str):
+        await self.context.bot.send_message(chat_id=user_id, text=message)
+
+    def add_handlers(self):
+        for handler in self.handlers:
+            self.context.application.add_handler(handler)
+
+    def remove_handlers(self):
+        for handler in self.handlers:
+            self.context.application.remove_handler(handler)
