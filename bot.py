@@ -132,6 +132,18 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     # TODO: implement this when needed
     # session_players = db.get_session_players(sql_connection, session_id)
 
+async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """End the current session"""
+    user = update.effective_user
+    session_id = db.get_most_recent_session_by_player(sql_connection, user.id)
+
+    if session_id is None:
+        await update.message.reply_text("No active session found to end.")
+        return
+
+    db.end_session(sql_connection, session_id)
+    await update.message.reply_text(f"Session {session_id} has been ended.")
+
 async def handle_number_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     game = GuessNumber(id=1, player_ids=waitlist.player_ids, update=update, context=context)
     logger.info(f'Guess number game start')
@@ -159,22 +171,7 @@ async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFA
     if session_id is None:
         logger.info(f"User message does not belong to any active session")
         # Private message, respond directly
-        if update.message.chat.type != 'group':
-            response = ollama.chat(model=LLM_MODEL, messages=[
-                {
-                'role': 'system',
-                'content': SYS_PROMPT_NO_CONTEXT,
-                },
-                {
-                    'role': 'user',
-                    'content': f"User name: {sender_name}, User message: {msg}",
-                },
-            ])
-            llm_response = response['message']['content']
-            await update.message.reply_text(llm_response)
-
-        # Group message, reply to the user only if bot is mentioned
-        elif update.message.chat.type == 'group' and f'@{BOT_NAME}' in update.message.text:
+        if update.message.chat.type != 'group' or f'@{BOT_NAME}' in update.message.text:
             response = ollama.chat(model=LLM_MODEL, messages=[
                 {
                 'role': 'system',
@@ -254,6 +251,8 @@ def main() -> None:
     application.add_handler(CommandHandler("waitlist", print_waitlist))
     # Start tournament / session
     application.add_handler(CommandHandler("tournament", start_tournament))
+    # end tournament / session
+    application.add_handler(CommandHandler("force_end", end_session))
     # Games for testing
     application.add_handler(CommandHandler("numbergame", handle_number_game_start))
     application.add_handler(CommandHandler("challenges", handle_challenge_game_start))

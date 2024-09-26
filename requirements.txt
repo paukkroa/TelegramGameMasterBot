@@ -1,0 +1,3 @@
+python-telegram-bot==21.6
+python-telegram-bot[job-queue]
+ollama=0.3.3
