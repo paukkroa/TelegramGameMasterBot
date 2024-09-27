@@ -401,6 +401,7 @@ def get_messages_from_sender(conn: sqlite3.Connection, session_id: str, sender_i
     return formatted_messages
 
 # TODO: Use hashing for player_id for improved security
+# IMPROVEMENT: Replace this command with a function to get the most recent by chat_id
 def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) -> int:
     cursor = conn.cursor()
     cursor.execute('''
@@ -411,6 +412,22 @@ def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) 
     ORDER BY ds.idate DESC 
     LIMIT 1
     ''', (player_id,))
+    try:
+        session_id = cursor.fetchone()
+        return session_id[0]
+    except:
+        return None
+    
+def get_most_recent_session_by_chat(conn: sqlite3.Connection, chat_id: str) -> str:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT session_id 
+    FROM D_SESSION
+    WHERE chat_id = ? 
+    AND ongoing = 1
+    ORDER BY chat_running_id DESC 
+    LIMIT 1
+    ''', (chat_id,))
     try:
         session_id = cursor.fetchone()
         return session_id[0]
