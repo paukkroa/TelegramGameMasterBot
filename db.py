@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import hashlib
 
 # LOGGING
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -41,11 +42,38 @@ def create_tables(conn: sqlite3.Connection) -> None:
     );
     ''')
 
+    # Chat information D_CHAT
+    conn.execute('''
+    CREATE TABLE IF NOT EXISTS D_CHAT (
+        chat_id TEXT PRIMARY KEY,
+        chat_name TEXT,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
+        idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    ''')
+
+    # Chat members R_CHAT_MEMBERS
+    conn.execute('''
+    CREATE TABLE IF NOT EXISTS R_CHAT_MEMBERS (
+        chat_id TEXT NOT NULL,
+        player_id INTEGER NOT NULL,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
+        idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (chat_id) REFERENCES D_CHAT(chat_id),
+        FOREIGN KEY (player_id) REFERENCES D_PLAYER(player_id)
+    );
+    ''')
+
     # Game sessions D_SESSION
     conn.execute('''
     CREATE TABLE IF NOT EXISTS D_SESSION (
-        session_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
+        session_id TEXT PRIMARY KEY,
+        chat_id TEXT NOT NULL,
+        chat_running_id INTEGER NOT NULL DEFAULT 1,
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         end_time TIMESTAMP,
         ongoing BOOLEAN DEFAULT 1,
@@ -53,14 +81,14 @@ def create_tables(conn: sqlite3.Connection) -> None:
         uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (host_id) REFERENCES D_PLAYER(player_id)
+        FOREIGN KEY (chat_id) REFERENCES D_CHAT(chat_id),
     );
     ''')
 
     # Session participants R_SESSION_PLAYERS
     conn.execute('''
     CREATE TABLE IF NOT EXISTS R_SESSION_PLAYERS (
-        session_id INTEGER,
+        session_id TEXT NOT NULL,
         player_id INTEGER,
         points INTEGER DEFAULT 0,
         iby TEXT DEFAULT 'system',
@@ -91,7 +119,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     # Games played in sessions R_SESSION_GAMES
     conn.execute('''
     CREATE TABLE IF NOT EXISTS R_SESSION_GAMES (
-        session_id INTEGER NOT NULL,
+        session_id TEXT NOT NULL,
         game_id INTEGER NOT NULL,
         winner_id INTEGER NOT NULL,
         loser_id INTEGER NOT NULL,
@@ -111,7 +139,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     # Session context F_SESSION_CONTEXT
     conn.execute('''
     CREATE TABLE IF NOT EXISTS R_SESSION_CONTEXT (
-        session_id INTEGER NOT NULL,
+        session_id TEXT NOT NULL,
         sender_id INTEGER NOT NULL,
         message TEXT NOT NULL,
         message_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -124,6 +152,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     );
     ''')
 
+# TODO: Use hashing for telegram_id for improved security
 def insert_player(conn: sqlite3.Connection, telegram_id: int, username: str) -> int:
     cursor = conn.cursor()
     # Check if the player already exists
@@ -140,14 +169,60 @@ def insert_player(conn: sqlite3.Connection, telegram_id: int, username: str) -> 
     player_id = cursor.lastrowid
     return player_id
 
-def get_players(conn: sqlite3.Connection) -> list:
+# IMPROVEMENT: Remove the below command as it compromises privacy
+def get_all_players(conn: sqlite3.Connection) -> list:
     cursor = conn.cursor()
     cursor.execute(f'''
-    SELECT player_id FROM D_PLAYER 
+    SELECT username FROM D_PLAYER 
     ''')
-    player_ids = cursor.fetchall()
-    return player_ids
+    usernames = cursor.fetchall()
+    return usernames
 
+# TODO: Use hashing for chat_id for improved security
+def create_chat(conn: sqlite3.Connection, chat_id: str, chat_name: str = '') -> None:
+    cursor = conn.cursor()
+    cursor.execute('''
+    INSERT INTO D_CHAT (chat_id, chat_name) VALUES (?, ?)
+    ''', (chat_id, chat_name))
+    conn.commit()
+
+# TODO: Use hashing for chat_id for improved security
+def delete_chat(conn: sqlite3.Connection, chat_id: str) -> None:
+    cursor = conn.cursor()
+    cursor.execute('''
+    DELETE FROM D_CHAT WHERE chat_id = ?
+    ''', (chat_id,))
+    conn.commit()
+
+# TODO: Use hashing for player_id and chat_id for improved security
+def add_player_to_chat(conn: sqlite3.Connection, chat_id: str, player_id: int) -> None:
+    cursor = conn.cursor()
+    cursor.execute('''
+    INSERT INTO R_CHAT_MEMBERS (chat_id, player_id) VALUES (?, ?)
+    ''', (chat_id, player_id))
+    conn.commit()
+
+# TODO: Use hashing for player_id and chat_id for improved security
+def remove_player_from_chat(conn: sqlite3.Connection, chat_id: str, player_id: int) -> None:
+    cursor = conn.cursor()
+    cursor.execute('''
+    DELETE FROM R_CHAT_MEMBERS WHERE chat_id = ? AND player_id = ?
+    ''', (chat_id, player_id))
+    conn.commit()
+
+# TODO: Use hashing for chat_id for improved security
+def get_chat_members(conn: sqlite3.Connection, chat_id: str) -> list:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT dp.username 
+    FROM R_CHAT_MEMBERS rcm
+    JOIN D_PLAYER dp ON rcm.player_id = dp.player_id
+    WHERE rcm.chat_id = ?
+    ''', (chat_id,))
+    usernames = cursor.fetchall()
+    return usernames
+
+# TODO: Use hashing for player_id and chat_id for improved security
 def insert_player_fact(conn: sqlite3.Connection, player_id: int, fact: str) -> int:
     cursor = conn.cursor()
 
@@ -173,37 +248,56 @@ def insert_game(conn: sqlite3.Connection, name: str, description: str, game_type
     game_id = cursor.lastrowid
     return game_id
 
-def start_session(conn: sqlite3.Connection, host_id: int) -> int:
+def start_session(conn: sqlite3.Connection, chat_id: str) -> str:
     cursor = conn.cursor()
-    cursor.execute(f'''
-    INSERT INTO D_SESSION (host_id) VALUES ({host_id})
-    ''')
+
+    # Get the current max chat_running_id for the given chat_id
+    cursor.execute('''
+    SELECT COALESCE(MAX(chat_running_id), 0) + 1 FROM D_SESSION WHERE chat_id = ?
+    ''', (chat_id,))
+    chat_running_id = cursor.fetchone()[0]
+
+    # Create the session_id
+    session_id = f"{chat_id}_{chat_running_id}"
+
+    # TODO: Use hashing for session_id for improved security
+    # Hash the session_id
+    # session_hash = hashlib.md5(session_id.encode()).hexdigest()
+
+    # Insert the new session
+    cursor.execute('''
+    INSERT INTO D_SESSION (session_id, chat_id, chat_running_id) VALUES (?, ?, ?)
+    ''', (session_id, chat_id, chat_running_id))
     conn.commit()
-    session_id = cursor.lastrowid
+
     return session_id
 
-def end_session(conn: sqlite3.Connection, session_id: int) -> None:
+# TODO: Use hashing for session_id for improved security
+def end_session(conn: sqlite3.Connection, session_id: str) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
     UPDATE D_SESSION SET end_time = CURRENT_TIMESTAMP, ongoing = 0 WHERE session_id = {session_id}
     ''')
     conn.commit()
 
-def add_player_to_session(conn: sqlite3.Connection, session_id: int, player_id: int) -> None:
+# TODO: Use hashing for session_id and player_id for improved security
+def add_player_to_session(conn: sqlite3.Connection, session_id: str, player_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
     INSERT INTO R_SESSION_PLAYERS (session_id, player_id) VALUES ({session_id}, {player_id})
     ''')
     conn.commit()
 
-def delete_player_from_session(conn: sqlite3.Connection, session_id: int, player_id: int) -> None:
+# TODO: Use hashing for session_id and player_id for improved security
+def delete_player_from_session(conn: sqlite3.Connection, session_id: str, player_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
     DELETE FROM R_SESSION_PLAYERS WHERE session_id = {session_id} AND player_id = {player_id}
     ''')
     conn.commit()
 
-def get_session_players(conn: sqlite3.Connection, session_id: int) -> list:
+# TODO: Use hashing for session_id for improved security
+def get_session_players(conn: sqlite3.Connection, session_id: str) -> list:
     cursor = conn.cursor()
     cursor.execute(f'''
     SELECT player_id FROM R_SESSION_PLAYERS WHERE session_id = {session_id}
@@ -211,20 +305,23 @@ def get_session_players(conn: sqlite3.Connection, session_id: int) -> list:
     player_ids = cursor.fetchall()
     return player_ids
 
-def add_game_to_session(conn: sqlite3.Connection, session_id: int, game_id: int) -> None:
+# TODO: Use hashing for session_id for improved security
+def add_game_to_session(conn: sqlite3.Connection, session_id: str, game_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
     INSERT INTO R_SESSION_GAMES (session_id, game_id) VALUES ({session_id}, {game_id})
     ''')
     conn.commit()
 
-def end_game_in_session(conn: sqlite3.Connection, session_id: int, game_id: int, winner_id: int, loser_id: int, iby: str) -> None:
+# TODO: Use hashing for session_id for improved security
+def end_game_in_session(conn: sqlite3.Connection, session_id: str, game_id: int, winner_id: int, loser_id: int, iby: str) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
     UPDATE R_SESSION_GAMES SET end_time = CURRENT_TIMESTAMP, winner_id = {winner_id}, loser_id = {loser_id}, iby = {iby} WHERE session_id = {session_id} AND game_id = {game_id}
     ''')
     conn.commit()
 
+# TODO: Use hashing for player_id for improved security
 def get_player_facts(conn: sqlite3.Connection, player_id: int) -> list:
     cursor = conn.cursor()
     cursor.execute(f'''
@@ -233,7 +330,8 @@ def get_player_facts(conn: sqlite3.Connection, player_id: int) -> list:
     facts = cursor.fetchall()
     return facts
 
-def get_player_points(conn: sqlite3.Connection, session_id: int, player_id: int) -> int:
+# TODO: Use hashing for session_id and player_id for improved security
+def get_player_points(conn: sqlite3.Connection, session_id: str, player_id: int) -> int:
     cursor = conn.cursor()
     cursor.execute(f'''
     SELECT points FROM R_SESSION_PLAYERS WHERE session_id = {session_id} AND player_id = {player_id}
@@ -241,28 +339,32 @@ def get_player_points(conn: sqlite3.Connection, session_id: int, player_id: int)
     points = cursor.fetchone()
     return points
 
-def add_points_to_player(conn: sqlite3.Connection, session_id: int, player_id: int, points: int) -> None:
+# TODO: Use hashing for session_id and player_id for improved security
+def add_points_to_player(conn: sqlite3.Connection, session_id: str, player_id: int, points: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
     UPDATE R_SESSION_PLAYERS SET points = points + {points} WHERE session_id = {session_id} AND player_id = {player_id}
     ''')
     conn.commit()
 
-def remove_points_from_player(conn: sqlite3.Connection, session_id: int, player_id: int, points: int) -> None:
+# TODO: Use hashing for session_id and player_id for improved security
+def remove_points_from_player(conn: sqlite3.Connection, session_id: str, player_id: int, points: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
     UPDATE R_SESSION_PLAYERS SET points = points - {points} WHERE session_id = {session_id} AND player_id = {player_id}
     ''')
     conn.commit()
 
-def add_message_to_session_context(conn: sqlite3.Connection, session_id: int, sender_id: int, message: str) -> None:
+# TODO: Use hashing for session_id and sender_id for improved security
+def add_message_to_session_context(conn: sqlite3.Connection, session_id: str, sender_id: int, message: str) -> None:
     cursor = conn.cursor()
     cursor.execute('''
     INSERT INTO R_SESSION_CONTEXT (session_id, sender_id, message) VALUES (?, ?, ?)
     ''', (session_id, sender_id, message))
     conn.commit()
 
-def get_session_messages(conn: sqlite3.Connection, session_id: int) -> str:
+# TODO: Use hashing for session_id for improved security
+def get_session_messages(conn: sqlite3.Connection, session_id: str) -> str:
     cursor = conn.cursor()
     cursor.execute('''
     SELECT dp.username, fsc.message 
@@ -274,7 +376,8 @@ def get_session_messages(conn: sqlite3.Connection, session_id: int) -> str:
     formatted_messages = ', '.join([f"{username} said: {message}" for username, message in messages])
     return formatted_messages
 
-def get_messages_from_sender(conn: sqlite3.Connection, session_id: int, sender_id: int) -> list:
+# TODO: Use hashing for session_id and sender_id for improved security
+def get_messages_from_sender(conn: sqlite3.Connection, session_id: str, sender_id: int) -> list:
     cursor = conn.cursor()
     cursor.execute('''
     SELECT message FROM R_SESSION_CONTEXT WHERE session_id = ? AND sender_id = ?
@@ -283,6 +386,7 @@ def get_messages_from_sender(conn: sqlite3.Connection, session_id: int, sender_i
     formatted_messages = ', '.join([f"{message}" for message in messages])
     return formatted_messages
 
+# TODO: Use hashing for player_id for improved security
 def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) -> int:
     cursor = conn.cursor()
     cursor.execute('''
