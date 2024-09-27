@@ -39,17 +39,43 @@ ______ _   _ _   _ _____ _____ _____ _____ _   _  _____
 """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a message when the command /start is issued."""
+    """
+    Create the chat and user in the database when the bot is started. 
+    Add the bot to the chat as well.
+    """
     user = update.effective_user
+    chat_id = update.effective_chat.id
+    chat_name = update.effective_chat.title
+    db.create_chat(sql_connection, chat_id, chat_name)
+    db.insert_player(sql_connection, user.id, user.username)
+    db.add_player_to_chat(sql_connection, user.id, chat_id)
+    db.add_player_to_chat(sql_connection, BOT_TG_ID, chat_id)
+
+    if update.message.chat.type != 'group':
+        message = rf"Hi {user.mention_html()}! Are you ready to start playing? Add me to a group chat with your friends and press /start there. Press /help for more information."
+    else:
+        message = rf"Hi {user.mention_html()}! Welcome to the group! Make sure all your friends here press /start as well. Press /help for more information."
     await update.message.reply_html(
-        rf"Hi {user.mention_html()}!",
-        reply_markup=ForceReply(selective=True),
-    )
+            message,
+            reply_markup=ForceReply(selective=True),
+        )
 
 # TODO: Add list of commands and their descriptions
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
-    await update.message.reply_text("Help!")
+    user = update.effective_user
+    await update.message.reply_text(rf"""Hi {user.mention_html()}!
+                                    
+                                    I'm a bot that can help you organize party game tournaments with your friends. The workflow is simple:
+
+                                    1. Add me to a group chat with your friends. You can admit admin rights to me to enable contextual messages.
+                                    2. Press /start to start join the group.
+                                    3. Press /join to join the waitlist for the next tournament.
+                                    4. Press /tournament to start a tournament with the players in the waitlist.
+                                    5. Play games and have fun!
+                                    
+                                    If you have any questions, feel free to ask by tagging me in the group chat (remember to give me admin rights to enable this). Have fun!
+                                    """)
 
 # TODO: Add command to list all available games
 # TODO: Add command to insert private information about a player (player facts)
@@ -103,9 +129,9 @@ async def handle_join_group(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     # TODO: Create D_GROUP and R_GROUP_PLAYER tables to be able to add player to unique groups
 
 async def list_all_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a list of all registered players"""
+    """Send a list of all registered players in databse"""
     # TODO: get from actual session and make response cleaner
-    players = db.get_players(sql_connection)
+    players = db.get_all_players(sql_connection)
     await update.message.reply_text(str(players))
 
 async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -246,7 +272,7 @@ def main() -> None:
     # Add bot id to D_PLAYER if not exists
     db.insert_player(sql_connection, BOT_TG_ID, BOT_NAME)
 
-    # Register the user 
+    # Register the user and chat
     application.add_handler(CommandHandler("start", start))
     # Help command
     application.add_handler(CommandHandler("help", help_command))
@@ -255,7 +281,7 @@ def main() -> None:
     # Join group
     application.add_handler(CommandHandler("addme", handle_join_group))
     # List current session players
-    application.add_handler(CommandHandler("players", list_all_players))
+    application.add_handler(CommandHandler("all_players", list_all_players))
     # Print waitlist
     application.add_handler(CommandHandler("waitlist", print_waitlist))
     # Start tournament / session
