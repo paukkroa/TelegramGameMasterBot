@@ -87,16 +87,18 @@ async def handle_join_group(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     player_exists = False
 
     existing_players = db.get_players(sql_connection)
+    logger.info(f"Existing players: {existing_players}")
     for player in existing_players:
-        if player[1] == user_id:
+        if player[0] == user_id:
             player_exists = True
             break
 
     if not player_exists:
         username = await get_username_by_id(user_id, context)
         db.insert_player(sql_connection, user_id, username)
-
-    await update.message.reply_text("Joined group succesfully")
+        await update.message.reply_text("Joined group succesfully")
+    else:
+        await update.message.reply_text("You are already a member of this group")
 
     # TODO: Create D_GROUP and R_GROUP_PLAYER tables to be able to add player to unique groups
 
