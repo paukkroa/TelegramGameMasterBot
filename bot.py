@@ -17,7 +17,8 @@ from utils import get_username_by_id
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
 BOT_NAME = "roopentestibot"
-BOT_TG_ID_STR = str(os.environ['TEST_BOT_ID'])
+BOT_TG_ID = os.environ['TEST_BOT_ID']
+BOT_TG_ID_STR = str(BOT_TG_ID)
 
 # LOGGING
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -51,7 +52,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text("Help!")
 
 # TODO: Add command to list all available games
-# TODO: Add command to start a random game with the players in a group
 # TODO: Add command to insert private information about a player (player facts)
 
 async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -98,8 +98,10 @@ async def handle_join_group(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     await update.message.reply_text("Joined group succesfully")
 
-async def list_session_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a list of players for current session"""
+    # TODO: Create D_GROUP and R_GROUP_PLAYER tables to be able to add player to unique groups
+
+async def list_all_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a list of all registered players"""
     # TODO: get from actual session and make response cleaner
     players = db.get_players(sql_connection)
     await update.message.reply_text(str(players))
@@ -124,7 +126,7 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     for player_id in waitlist.player_ids:
         db.add_player_to_session(sql_connection, session_id, player_id)
 
-    tournament = Tournament(session_id, waitlist.player_ids, number_of_games, update, context)
+    tournament = Tournament(session_id, waitlist.player_ids, number_of_games, update, context, sql_connection, BOT_TG_ID)
     logger.info(f"Tournament {tournament}")
 
     waitlist.clear()
@@ -207,6 +209,7 @@ async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFA
                 },
             ])
             llm_response = response['message']['content']
+            db.add_message_to_session_context(sql_connection, session_id, BOT_TG_ID, msg)
             await update.message.reply_text(llm_response)
 
         
@@ -238,6 +241,9 @@ def main() -> None:
     # Create the database connection and create the tables
     db.create_tables(conn=sql_connection)
 
+    # Add bot id to D_PLAYER if not exists
+    db.insert_player(sql_connection, BOT_TG_ID, BOT_NAME)
+
     # Register the user 
     application.add_handler(CommandHandler("start", start))
     # Help command
@@ -247,7 +253,7 @@ def main() -> None:
     # Join group
     application.add_handler(CommandHandler("addme", handle_join_group))
     # List current session players
-    application.add_handler(CommandHandler("players", list_session_players))
+    application.add_handler(CommandHandler("players", list_all_players))
     # Print waitlist
     application.add_handler(CommandHandler("waitlist", print_waitlist))
     # Start tournament / session
