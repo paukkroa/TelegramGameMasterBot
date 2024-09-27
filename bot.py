@@ -46,6 +46,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     chat_id = update.effective_chat.id
     chat_name = update.effective_chat.title
+
+    # These functions have unique constraints so they will not add duplicates
     db.create_chat(sql_connection, chat_id, chat_name)
     db.insert_player(sql_connection, user.id, user.username)
     db.add_player_to_chat(sql_connection, user.id, chat_id)
@@ -64,18 +66,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
     user = update.effective_user
-    await update.message.reply_text(rf"""Hi {user.mention_html()}!
-                                    
-                                    I'm a bot that can help you organize party game tournaments with your friends. The workflow is simple:
+    await update.message.reply_text(rf"""I'm a bot that can help you organize party game tournaments with your friends. The workflow is simple:
 
-                                    1. Add me to a group chat with your friends. You can admit admin rights to me to enable contextual messages.
-                                    2. Press /start to start join the group.
-                                    3. Press /join to join the waitlist for the next tournament.
-                                    4. Press /tournament to start a tournament with the players in the waitlist.
-                                    5. Play games and have fun!
-                                    
-                                    If you have any questions, feel free to ask by tagging me in the group chat (remember to give me admin rights to enable this). Have fun!
-                                    """)
+1. Add me to a group chat with your friends. You can admit admin rights to me to enable contextual messages.
+2. Press /start to start join the group.
+3. Press /join to join the waitlist for the next tournament.
+4. Press /tournament to start a tournament with the players in the waitlist.
+5. Play games and have fun!
+
+If you have any questions, feel free to ask by tagging me in the group chat (remember to give me admin rights to enable this). Have fun!
+""")
 
 # TODO: Add command to list all available games
 # TODO: Add command to insert private information about a player (player facts)
