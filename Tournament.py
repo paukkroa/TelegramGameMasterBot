@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from typing import Type
 import random
+import sqlite3
 
 from utils import get_username_by_id
 from games.GuessNumber import GuessNumber
@@ -12,8 +13,8 @@ from EventPoller import EventPoller
 import db
 
 class Tournament:
-    def __init__(self, id: int, player_ids: list, number_of_games: int, update: Update,
-                 context: ContextTypes.DEFAULT_TYPE):
+    def __init__(self, session_id: int, player_ids: list, number_of_games: int, update: Update,
+                 context: ContextTypes.DEFAULT_TYPE, sql_connection: sqlite3.Connection, bot_tg_id: int):
         self.player_ids = player_ids
         self.update = update
         self.context = context
@@ -24,8 +25,12 @@ class Tournament:
         self.poller = EventPoller(30, self.player_ids, self.update, self.context)
         self.handlers = []
         self.chat_id = self.update.effective_chat.id
+        self.sql_connection = sql_connection
+        self.session_id = session_id
+        self.bot_tg_id = bot_tg_id
 
     async def send_group_chat(self, message: str):
+        db.add_message_to_session_context(self.sql_connection, self.session_id, self.bot_tg_id, message)
         await self.context.bot.send_message(chat_id=self.chat_id, text=message)
 
     async def start(self) -> None:
@@ -43,8 +48,8 @@ class Tournament:
     async def start_next_game(self) -> None:
         if self.current_game_index < len(self.games):
             current_game = self.games[self.current_game_index]
-
-            await self.send_group_chat(f"Starting game {self.current_game_index + 1} of {self.number_of_games}")
+            msg = f"Starting game {self.current_game_index + 1} of {self.number_of_games}"
+            await self.send_group_chat(msg)
             await current_game.start()
 
             self.current_game_index += 1
@@ -73,32 +78,44 @@ class Tournament:
         # TODO: define actual game ids
         counter = 1
         for game_class in selected_games:
-            game_instance = self._create_game_instance(game_class, counter, self.player_ids, self.update, self.context)
+            game_instance = self._create_game_instance(game_class, counter, self.player_ids, self.update, self.context, self.sql_connection, self.session_id, self.bot_tg_id_str)
             self.games.append(game_instance)
             counter += 1
 
-        await self.send_group_chat(f"Created {len(self.games)} games")
+        msg = f"Created {len(self.games)} games"
+        await self.send_group_chat(msg)
 
     def set_games(self, games: list) -> None:
         self.games = games
 
-    def _create_game_instance(self, game_class: Type[Game], id: int, player_ids: list, update: Update,
-                              context: ContextTypes.DEFAULT_TYPE) -> Game:
-        return game_class(id=id, player_ids=player_ids, is_part_of_tournament=True,
-                          start_next_game=self.start_next_game, update=update, context=context)
+    def _create_game_instance(self, game_class: Type[Game], 
+                              id: int, 
+                              player_ids: list, 
+                              update: Update,
+                              context: ContextTypes.DEFAULT_TYPE, 
+                              sql_connection: sqlite3.Connection = db.connect(), 
+                              session_id: int = None, 
+                              bot_tg_id: str = None) -> Game:
+        return game_class(id=id, 
+                          player_ids=player_ids, 
+                          is_part_of_tournament=True,
+                          start_next_game=self.start_next_game, 
+                          update=update, 
+                          context=context, 
+                          sql_connection=sql_connection, 
+                          session_id=session_id, 
+                          bot_tg_id=bot_tg_id)
 
     async def end(self):
         self.is_active = False
 
         """End the current session"""
-        sql_connection = db.connect()
         user = self.update.effective_user
-        session_id = db.get_most_recent_session_by_player(sql_connection, user.id)
+        session_id = db.get_most_recent_session_by_player(self.sql_connection, user.id)
 
         if session_id is None:
             print("No active session found to end.")
 
-        db.end_session(sql_connection, session_id)
-        db.close_connection(sql_connection)
+        db.end_session(self.sql_connection, session_id)
         await self.send_group_chat("Tournament finished!")
         self.poller.end()
