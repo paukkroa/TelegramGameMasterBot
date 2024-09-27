@@ -81,7 +81,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
         uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (chat_id) REFERENCES D_CHAT(chat_id),
+        FOREIGN KEY (chat_id) REFERENCES D_CHAT(chat_id)
     );
     ''')
 
@@ -95,7 +95,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
         uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (player_id) REFERENCES D_PLAYER(player_id)
+        FOREIGN KEY (player_id) REFERENCES D_PLAYER(player_id),
         FOREIGN KEY (session_id) REFERENCES D_PLAYER(session_id)
     );
     ''')
