@@ -1,5 +1,5 @@
-from telegram import ForceReply, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram import Update
+from telegram.ext import ContextTypes
 from utils import get_username_by_id
 
 class Waitlist:
