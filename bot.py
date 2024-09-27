@@ -211,7 +211,7 @@ async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFA
                 },
             ])
             llm_response = response['message']['content']
-            db.add_message_to_session_context(sql_connection, session_id, BOT_TG_ID, msg)
+            db.add_message_to_session_context(sql_connection, session_id, BOT_TG_ID, llm_response)
             await update.message.reply_text(llm_response)
 
         
