@@ -13,6 +13,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     CREATE TABLE IF NOT EXISTS D_PLAYER (
         player_id INTEGER PRIMARY KEY,
         username TEXT NOT NULL,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -24,6 +26,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
         fact_id INTEGER PRIMARY KEY AUTOINCREMENT,
         player_id INTEGER NOT NULL,
         fact TEXT NOT NULL,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (player_id) REFERENCES D_PLAYER(player_id)
@@ -38,6 +42,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         end_time TIMESTAMP,
         ongoing BOOLEAN DEFAULT 1,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (host_id) REFERENCES D_PLAYER(player_id)
@@ -47,12 +53,15 @@ def create_tables(conn: sqlite3.Connection) -> None:
     # Session participants R_SESSION_PLAYERS
     conn.execute('''
     CREATE TABLE IF NOT EXISTS R_SESSION_PLAYERS (
-        session_id INTEGER PRIMARY KEY,
-        player_id INTEGER NOT NULL,
+        session_id INTEGER,
+        player_id INTEGER,
         points INTEGER DEFAULT 0,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (player_id) REFERENCES D_PLAYER(player_id)
+        FOREIGN KEY (session_id) REFERENCES D_PLAYER(session_id)
     );
     ''')
 
@@ -65,6 +74,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
         type TEXT NOT NULL,
         rules TEXT,
         telegram_commands TEXT,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -79,8 +90,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
         loser_id INTEGER NOT NULL,
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         end_time TIMESTAMP,
-        iby TEXT,
-        uby TEXT,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (session_id) REFERENCES D_SESSION(session_id),
@@ -92,13 +103,13 @@ def create_tables(conn: sqlite3.Connection) -> None:
 
     # Session context F_SESSION_CONTEXT
     conn.execute('''
-    CREATE TABLE IF NOT EXISTS F_SESSION_CONTEXT (
+    CREATE TABLE IF NOT EXISTS R_SESSION_CONTEXT (
         session_id INTEGER NOT NULL,
         sender_id INTEGER NOT NULL,
         message TEXT NOT NULL,
         message_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        iby TEXT,
-        uby TEXT,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (session_id) REFERENCES D_SESSION(session_id),
@@ -106,7 +117,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     );
     ''')
 
-def insert_player(conn: sqlite3.Connection, telegram_id: str, username: str) -> int:
+def insert_player(conn: sqlite3.Connection, telegram_id: int, username: str) -> int:
     cursor = conn.cursor()
     cursor.execute(f'''
     INSERT INTO D_PLAYER (player_id, username) VALUES (?, ?)
