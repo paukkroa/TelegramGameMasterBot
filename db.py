@@ -1,4 +1,11 @@
 import sqlite3
+import logging
+
+# LOGGING
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# set higher logging level for httpx to avoid all GET and POST requests being logged
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 
 def connect(db: str = 'drink_games.db') -> sqlite3.Connection:
     conn = sqlite3.connect(db)
@@ -119,7 +126,14 @@ def create_tables(conn: sqlite3.Connection) -> None:
 
 def insert_player(conn: sqlite3.Connection, telegram_id: int, username: str) -> int:
     cursor = conn.cursor()
-    cursor.execute(f'''
+    # Check if the player already exists
+    cursor.execute('SELECT 1 FROM D_PLAYER WHERE player_id = ?', (telegram_id,))
+    if cursor.fetchone() is not None:
+        logger.info(f"Player with id {telegram_id}, username {username} already exists in D_PLAYER.")
+        return None
+    
+    # Insert the new player
+    cursor.execute('''
     INSERT INTO D_PLAYER (player_id, username) VALUES (?, ?)
     ''', (telegram_id, username))
     conn.commit()
