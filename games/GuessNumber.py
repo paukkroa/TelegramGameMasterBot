@@ -3,16 +3,33 @@ from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 from typing import List, Callable
 import random
+import sqlite3
 
 from utils import get_username_by_id
 from games.Game import Game
 
 
 class GuessNumber(Game):
-    def __init__(self, id: int, player_ids: list, update: Update, context: ContextTypes.DEFAULT_TYPE,
-                 is_part_of_tournament: bool = False, start_next_game: Callable[[], None] = None):
-        super().__init__(name="Guess number", id=id, player_ids=player_ids, update=update, context=context,
-                         is_part_of_tournament=is_part_of_tournament, start_next_game=start_next_game)
+    def __init__(self, 
+                 id: int, 
+                 player_ids: list, 
+                 update: Update, 
+                 context: ContextTypes.DEFAULT_TYPE,
+                 is_part_of_tournament: bool = False, 
+                 start_next_game: Callable[[], None] = None,
+                 sql_connection: sqlite3.Connection = connect(), 
+                 session_id: int = None, 
+                 bot_tg_id: str = None):
+        super().__init__(name="Guess number", 
+                         id=id, 
+                         player_ids=player_ids, 
+                         update=update, 
+                         context=context,
+                         is_part_of_tournament=is_part_of_tournament, 
+                         start_next_game=start_next_game,
+                         sql_connection=sql_connection, 
+                         session_id=session_id, 
+                         bot_tg_id=bot_tg_id)
         self.target_number = 0
         self.guesses = {player_id: None for player_id in player_ids}  # Track guess of each user; {id, value}
         self.winner_id = 0
@@ -67,8 +84,7 @@ class GuessNumber(Game):
         if closest_user_id != "":
             username = await get_username_by_id(closest_user_id, self.context)
             await self.send_group_chat(
-                f"Winner is {username}! Secret number was {self.target_number} and they guessed"
-                f" {closest_guess}"
+                f"Winner is {username}! Secret number was {self.target_number} and they guessed {closest_guess}"
             )
 
         else:

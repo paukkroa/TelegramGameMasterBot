@@ -2,16 +2,34 @@ from telegram import Update
 from telegram.ext import CommandHandler, ContextTypes
 import random
 from typing import Callable
+import sqlite3
+import db
 
 from games.Game import Game
 from resources.challenges import all_challenges
 from utils import get_username_by_id
 
 class ChallengeGame(Game):
-    def __init__(self, id: int, player_ids: list, update: Update, context: ContextTypes.DEFAULT_TYPE,
-                 is_part_of_tournament: bool = False, start_next_game: Callable[[], None] = None):
-        super().__init__(name="Random challenges", id=id, player_ids=player_ids, update=update, context=context,
-                         is_part_of_tournament=is_part_of_tournament, start_next_game=start_next_game)
+    def __init__(self, 
+                 id: int, 
+                 player_ids: list, 
+                 update: Update, 
+                 context: ContextTypes.DEFAULT_TYPE,
+                 is_part_of_tournament: bool = False, 
+                 start_next_game: Callable[[], None] = None,
+                 sql_connection: sqlite3.Connection = db.connect(), 
+                 session_id: int = None, 
+                 bot_tg_id: str = None):
+        super().__init__(name="Random challenges", 
+                         id=id, 
+                         player_ids=player_ids, 
+                         update=update, 
+                         context=context,
+                         is_part_of_tournament=is_part_of_tournament, 
+                         start_next_game=start_next_game, 
+                         sql_connection=sql_connection, 
+                         session_id=session_id, 
+                         bot_tg_id=bot_tg_id)
         self.rounds = 10
         self.challenges = []
         self.current_challenge_number = 1
