@@ -78,7 +78,14 @@ class Tournament:
         # TODO: define actual game ids
         counter = 1
         for game_class in selected_games:
-            game_instance = self._create_game_instance(game_class, counter, self.player_ids, self.update, self.context, self.sql_connection, self.session_id, self.bot_tg_id_str)
+            game_instance = self._create_game_instance(game_class, 
+                                                       counter, 
+                                                       self.player_ids, 
+                                                       self.update, 
+                                                       self.context, 
+                                                       self.sql_connection, 
+                                                       self.session_id, 
+                                                       self.bot_tg_id)
             self.games.append(game_instance)
             counter += 1
 
