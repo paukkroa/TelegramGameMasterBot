@@ -244,7 +244,7 @@ def remove_points_from_player(conn: sqlite3.Connection, session_id: int, player_
 def add_message_to_session_context(conn: sqlite3.Connection, session_id: int, sender_id: int, message: str) -> None:
     cursor = conn.cursor()
     cursor.execute('''
-    INSERT INTO F_SESSION_CONTEXT (session_id, sender_id, message) VALUES (?, ?, ?)
+    INSERT INTO R_SESSION_CONTEXT (session_id, sender_id, message) VALUES (?, ?, ?)
     ''', (session_id, sender_id, message))
     conn.commit()
 
@@ -252,7 +252,7 @@ def get_session_messages(conn: sqlite3.Connection, session_id: int) -> str:
     cursor = conn.cursor()
     cursor.execute('''
     SELECT dp.username, fsc.message 
-    FROM F_SESSION_CONTEXT fsc
+    FROM R_SESSION_CONTEXT fsc
     JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
     WHERE fsc.session_id = ?
     ''', (session_id,))
@@ -263,7 +263,7 @@ def get_session_messages(conn: sqlite3.Connection, session_id: int) -> str:
 def get_messages_from_sender(conn: sqlite3.Connection, session_id: int, sender_id: int) -> list:
     cursor = conn.cursor()
     cursor.execute('''
-    SELECT message FROM F_SESSION_CONTEXT WHERE session_id = ? AND sender_id = ?
+    SELECT message FROM R_SESSION_CONTEXT WHERE session_id = ? AND sender_id = ?
     ''', (session_id, sender_id,))
     messages = cursor.fetchall()
     formatted_messages = ', '.join([f"{message}" for message in messages])
