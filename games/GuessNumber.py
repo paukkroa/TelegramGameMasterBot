@@ -1,3 +1,4 @@
+import db
 from db import *
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
@@ -5,7 +6,7 @@ from typing import List, Callable
 import random
 import sqlite3
 
-from utils import get_username_by_id
+from utils import get_username_by_id, convert_swigs_to_units
 from games.Game import Game
 
 
@@ -31,7 +32,8 @@ class GuessNumber(Game):
                          session_id=session_id, 
                          bot_tg_id=bot_tg_id)
         self.target_number = 0
-        self.guesses = {player_id: None for player_id in player_ids}  # Track guess of each user; {id, value}
+        self.guesses = {player_id: None for player_id in player_ids} # Track guess of each user - {id, value}
+        self.drinks = {player_id: None for player_id in player_ids}
         self.winner_id = 0
 
     async def start(self):
@@ -67,34 +69,64 @@ class GuessNumber(Game):
             self.guesses[user_id] = 0  # Indicate false guess, exclude user
 
     async def _calculate_winner(self):
-        closest_user_id = ""
-        closest_distance = float('inf')
-        closest_guess = float('inf')
+        # Order is best first - these are lists
+        sorted_guesses = sorted(self.guesses.items(), key=lambda item: abs(item[1] - self.target_number))
+        # Order is worst first
+        reversed_guesses = sorted_guesses[::-1]
 
-        for player_id, guess in self.guesses.items():
-            if guess == 0 or guess is None:  # player did not obey rules
-                continue
+        # POINTS AND RESULTS
 
-            distance = abs(self.target_number - guess)
-            if distance < closest_distance:
-                closest_distance = distance
-                closest_user_id = player_id
-                closest_guess = guess
+        winner_id = sorted_guesses[0][0]
+        winner_username = await get_username_by_id(winner_id, self.context)
 
-        if closest_user_id != "":
-            username = await get_username_by_id(closest_user_id, self.context)
-            await self.send_group_chat(
-                f"Winner is {username}! Secret number was {self.target_number} and they guessed {closest_guess}"
-            )
+        if self.session_id:
+            db.add_points_to_player(self.sql_connection, self.session_id, winner_id, 5)
 
-        else:
-            await self.send_group_chat("We do not have a winner :(")
+        message = f'''
+        Winner is {winner_username}! Secret number was {self.target_number} and they guessed {sorted_guesses[0][1]}.
+        '''
 
+        if len(sorted_guesses) >= 2:
+            second_id = sorted_guesses[1][0]
+            second_username = await get_username_by_id(second_id, self.context)
+            message += f'Second was {second_username}'
+            if self.session_id:
+                db.add_points_to_player(self.sql_connection, self.session_id, second_id, 3)
+
+        if len(sorted_guesses) >= 3:
+            third_id = sorted_guesses[2][0]
+            third_username = await get_username_by_id(third_id, self.context)
+            message += f'and third was {third_username}'
+            if self.session_id:
+                db.add_points_to_player(self.sql_connection, self.session_id, third_id, 1)
+
+        # AWARD DRINKS
+
+        message += f'\n\n Drinks awarded:\n'
+
+        for player_id, guess in reversed_guesses:
+            username = await get_username_by_id(player_id, self.context)
+            difference = abs(guess - self.target_number)
+
+            if guess == 0 or guess is None: # player did not obey rules
+                difference = 20
+
+            message += f'\n{username}: {difference}'
+            drink_units = convert_swigs_to_units(difference)
+
+            if self.session_id:
+                db.add_drinks_to_player(self.sql_connection, self.session_id, player_id, drink_units)
+
+        await self.send_group_chat(message)
         await self.end()
 
     async def end(self):
         await self.send_group_chat("Number game ended.")
         self.remove_handlers()
+
+        for player_id in self.player_ids:
+            if self.session_id:
+                db.increase_player_game_count(self.sql_connection, self.session_id, player_id, 1)
 
         if self.is_part_of_tournament:
             await self.start_next_game()

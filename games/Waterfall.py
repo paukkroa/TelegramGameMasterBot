@@ -43,5 +43,9 @@ class Waterfall(Game):
         await self.send_group_chat("Waterfall ended.")
         self.remove_handlers()
 
+        for player_id in self.player_ids:
+            db.increase_player_game_count(self.sql_connection, self.session_id, player_id, 1)
+            db.add_points_to_player(self.sql_connection, self.session_id, player_id, 1)
+
         if self.is_part_of_tournament:
             await self.start_next_game()
