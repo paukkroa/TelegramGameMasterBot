@@ -141,7 +141,6 @@ async def list_all_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     players = db.get_all_players(sql_connection)
     await update.message.reply_text(str(players))
 
-# TODO: Fix this
 async def list_group_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a list of all registered players in the current chat"""
     chat_id = update.effective_chat.id
@@ -188,13 +187,13 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         logger.info(f"Adding player {player_id} to session {session_id}")
         db.add_player_to_session(sql_connection, session_id, player_id)
 
-    # TODO: test if this works as intended. The session id should keep it in check(?)
     tournament = Tournament(session_id, waitlist.player_ids, number_of_games, update, context, sql_connection, BOT_TG_ID)
     ongoing_tournaments[chat_id] = tournament
     logger.info(f"Tournament {tournament}")
 
     waitlist.clear() # Is this needed anymore?
     del current_waitlists[chat_id]
+    del waitlist
     await tournament.start()
 
 async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
