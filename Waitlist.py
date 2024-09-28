@@ -1,10 +1,11 @@
-from telegram import ForceReply, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram import Update
+from telegram.ext import ContextTypes
 from utils import get_username_by_id
 
 class Waitlist:
-    def __init__(self):
+    def __init__(self, chat_id: int):
         self.player_ids = []
+        self.chat_id = chat_id
 
     def add_player(self, player_id) -> bool:
         if player_id not in self.player_ids:
@@ -22,6 +23,9 @@ class Waitlist:
 
     def clear(self) -> None:
         self.player_ids = []
+
+    def get_chat_id(self) -> int:
+        return self.chat_id
 
     async def list_players(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = f"Players on waitlist: \n"

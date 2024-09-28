@@ -17,7 +17,7 @@ class Waterfall(Game):
                  is_part_of_tournament: bool = False, 
                  start_next_game: Callable[[], None] = None,
                  sql_connection: sqlite3.Connection = db.connect(), 
-                 session_id: int = None, 
+                 session_id: str = None, 
                  bot_tg_id: str = None):
         super().__init__(name="Waterfall", 
                          id=id, 
