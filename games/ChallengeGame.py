@@ -7,7 +7,7 @@ import db
 
 from games.Game import Game
 from resources.challenges import all_challenges_by_level
-from utils import get_username_by_id
+from utils import get_username_by_id, convert_swigs_to_units, convert_shots_to_units
 
 class ChallengeGame(Game):
     def __init__(self, 
@@ -31,7 +31,6 @@ class ChallengeGame(Game):
                          session_id=session_id, 
                          bot_tg_id=bot_tg_id)
         self.rounds = 10
-        self.challenges = []
         self.current_challenge_number = 1
 
     async def start(self):
@@ -61,13 +60,18 @@ class ChallengeGame(Game):
         user_id = self.player_ids[user_index]
 
         username = await get_username_by_id(user_id, context)
-        await self.send_group_chat(f"Player: {username} \nChallenge: {challenge}")
+        await self.send_group_chat(f"Player: {username} \nChallenge: {challenge['name']}")
 
-        # 1 for easy, 3 for medium, 5 for hard
-        points = challenge_level * 2 + 1
+        if challenge['swigs'] > 0:
+            drink_units = convert_swigs_to_units(challenge['swigs'])
+            db.add_drinks_to_player(self.sql_connection, self.session_id, user_id, drink_units)
+
+        if challenge['shots'] > 0:
+            drink_units = convert_shots_to_units(challenge['shots'])
+            db.add_drinks_to_player(self.sql_connection, self.session_id, user_id, drink_units)
+
+        points = challenge['points']
         db.add_points_to_player(self.sql_connection, self.session_id, user_id, points)
-
-        # TODO: Add drink units - requires structure change in challenges
 
         self.current_challenge_number += 1
 
@@ -77,7 +81,6 @@ class ChallengeGame(Game):
         self.remove_handlers()
 
         self.current_challenge_number = 1
-        self.challenges.clear()
 
         for player_id in self.player_ids:
             db.increase_player_game_count(self.sql_connection, self.session_id, player_id, 1)

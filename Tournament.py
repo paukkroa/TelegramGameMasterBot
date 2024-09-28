@@ -22,12 +22,13 @@ class Tournament:
         self.number_of_games = number_of_games
         self.current_game_index = 0
         self.is_active = False
-        self.poller = EventPoller(30, self.player_ids, self.update, self.context)
         self.handlers = []
         self.chat_id = self.update.effective_chat.id
         self.sql_connection = sql_connection
         self.session_id = session_id
         self.bot_tg_id = bot_tg_id
+        self.poller = EventPoller(30, self.player_ids, self.update, self.context,
+                                  self.sql_connection, self.session_id)
 
     async def send_group_chat(self, message: str):
         db.add_message_to_session_context(self.sql_connection, self.session_id, self.bot_tg_id, message)
