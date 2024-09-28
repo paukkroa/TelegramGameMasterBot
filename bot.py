@@ -12,7 +12,7 @@ from games.GuessNumber import GuessNumber
 from games.ChallengeGame import ChallengeGame
 from games.GuessNumber import GuessNumber
 
-from llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT
+from ai_utils.llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT
 from utils import get_username_by_id
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
@@ -224,8 +224,6 @@ async def handle_challenge_game_start(update: Update, context: ContextTypes.DEFA
     game.set_rounds(5)
     logger.info(f"Challenge game start")
     await game.start()
-
-# TODO: Add command to end the tournament
 
 ### LLM Functions
 
