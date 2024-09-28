@@ -13,7 +13,7 @@ from EventPoller import EventPoller
 import db
 
 class Tournament:
-    def __init__(self, session_id: int, player_ids: list, number_of_games: int, update: Update,
+    def __init__(self, session_id: str, player_ids: list, number_of_games: int, update: Update,
                  context: ContextTypes.DEFAULT_TYPE, sql_connection: sqlite3.Connection, bot_tg_id: int):
         self.player_ids = player_ids
         self.update = update
@@ -101,7 +101,7 @@ class Tournament:
                               update: Update,
                               context: ContextTypes.DEFAULT_TYPE, 
                               sql_connection: sqlite3.Connection = db.connect(), 
-                              session_id: int = None, 
+                              session_id: str = None, 
                               bot_tg_id: str = None) -> Game:
         return game_class(id=id, 
                           player_ids=player_ids, 
