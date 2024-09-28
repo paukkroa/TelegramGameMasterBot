@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 sql_connection = db.connect()
 current_waitlists = dict()
+ongoing_tournaments = dict()
 
 """
 ______ _   _ _   _ _____ _____ _____ _____ _   _  _____ 
@@ -187,6 +188,7 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     # TODO: test if this works as intended. The session id should keep it in check(?)
     tournament = Tournament(session_id, waitlist.player_ids, number_of_games, update, context, sql_connection, BOT_TG_ID)
+    ongoing_tournaments[chat_id] = tournament
     logger.info(f"Tournament {tournament}")
 
     waitlist.clear() # Is this needed anymore?
@@ -196,14 +198,19 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """End the current session"""
     chat_id = update.effective_chat.id
-    session_id = db.get_most_recent_session_by_chat(sql_connection, chat_id)
-
-    if session_id is None:
-        await update.message.reply_text("No active session found to end.")
+    try:
+        tournament = ongoing_tournaments[chat_id]
+        logger.info(f"Tournament found for chat {chat_id}: {tournament}")
+    except KeyError:
+        logger.info(f"No tournament found for chat {chat_id}")
+        await update.message.reply_text("No active tournament found to end.")
         return
+    
+    await tournament.end()
+    del ongoing_tournaments[chat_id]
+    del tournament
 
-    db.end_session(sql_connection, session_id)
-    await update.message.reply_text(f"Session {session_id} has been ended.")
+    await update.message.reply_text(f"Tournament has been ended.")
 
 # TODO: Fix the below functions to work with the current_waitlist dict
 # or delete them completely
