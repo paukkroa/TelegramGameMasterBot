@@ -142,6 +142,7 @@ async def list_all_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     players = db.get_all_players(sql_connection)
     await update.message.reply_text(str(players))
 
+# TODO: Fix this
 async def list_group_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a list of all registered players in the current chat"""
     # TODO: get from actual session and make response cleaner
@@ -169,6 +170,7 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
     
     session_id = db.start_session(sql_connection, chat_id)
+    logger.info(f"Session {session_id} started for chat {chat_id}")
     # Add extra empty char to list to prevent index out of range error
     msg_words = update.message.text.split(' ') + ['']
 
@@ -180,6 +182,7 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     logger.info(f"Tournament games: {number_of_games}")
 
     for player_id in waitlist.player_ids:
+        logger.info(f"Adding player {player_id} to session {session_id}")
         db.add_player_to_session(sql_connection, session_id, player_id)
 
     # TODO: test if this works as intended. The session id should keep it in check(?)
