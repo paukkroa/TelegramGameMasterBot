@@ -24,4 +24,5 @@ challenges_hard = [
     'Get a cocktail made for you (bad)'
 ]
 
+all_challenges_by_level = [challenges_easy, challenges_medium, challenges_hard]
 all_challenges = challenges_easy + challenges_medium + challenges_hard
