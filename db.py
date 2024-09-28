@@ -274,32 +274,31 @@ def start_session(conn: sqlite3.Connection, chat_id: str) -> str:
     # Create the session_id
     session_id = f"{chat_id}_{chat_running_id}"
 
-    # TODO: Use hashing for session_id for improved security
     # Hash the session_id
-    # session_hash = hashlib.md5(session_id.encode()).hexdigest()
+    session_hash = hashlib.md5(session_id.encode()).hexdigest()
 
     # Insert the new session
     cursor.execute('''
     INSERT INTO D_SESSION (session_id, chat_id, chat_running_id) VALUES (?, ?, ?)
-    ''', (session_id, chat_id, chat_running_id))
+    ''', (session_hash, chat_id, chat_running_id,))
     conn.commit()
 
-    return session_id
+    return session_hash
 
 # TODO: Use hashing for session_id for improved security
 def end_session(conn: sqlite3.Connection, session_id: str) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
-    UPDATE D_SESSION SET end_time = CURRENT_TIMESTAMP, ongoing = 0 WHERE session_id = {session_id}
-    ''')
+    UPDATE D_SESSION SET end_time = CURRENT_TIMESTAMP, ongoing = 0 WHERE session_id = ?
+    ''', (session_id,))
     conn.commit()
 
 # TODO: Use hashing for session_id and player_id for improved security
 def add_player_to_session(conn: sqlite3.Connection, session_id: str, player_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
-    INSERT INTO R_SESSION_PLAYERS (session_id, player_id) VALUES ({session_id}, {player_id})
-    ''')
+    INSERT INTO R_SESSION_PLAYERS (session_id, player_id) VALUES (?, ?)
+    ''', (session_id, player_id))
     conn.commit()
 
 # TODO: Use hashing for session_id and player_id for improved security
