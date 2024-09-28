@@ -14,6 +14,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
+# TODO: Add rolling context window
 async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, sql_connection: sqlite3.Connection, bot_name: str, bot_tg_id: int) -> None:
     msg = update.message.text
     # Remove bot mention from the message
