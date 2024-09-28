@@ -50,8 +50,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # These functions have unique constraints so they will not add duplicates
     db.create_chat(sql_connection, chat_id, chat_name)
     db.insert_player(sql_connection, user.id, user.username)
-    db.add_player_to_chat(sql_connection, user.id, chat_id)
-    db.add_player_to_chat(sql_connection, BOT_TG_ID, chat_id)
+    db.add_player_to_chat(sql_connection, chat_id, user.id)
+    db.add_player_to_chat(sql_connection, chat_id, BOT_TG_ID)
 
     if update.message.chat.type != 'group':
         message = rf"Hi {user.mention_html()}! Are you ready to start playing? Add me to a group chat with your friends and press /start there. Press /help for more information."
@@ -144,9 +144,13 @@ async def list_all_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 # TODO: Fix this
 async def list_group_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a list of all registered players in the current chat"""
-    # TODO: get from actual session and make response cleaner
-    players = db.get_chat_members(sql_connection, update.effective_chat.id)
-    await update.message.reply_text(str(players))    
+    chat_id = update.effective_chat.id
+    players = db.get_chat_members(sql_connection, chat_id)
+    players_str = "Group members: "
+    for player in players:
+        players_str += f"{player}, "
+    players_str = players_str[:-2]
+    await update.message.reply_text(str(players_str))    
 
 async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
