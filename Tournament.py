@@ -116,12 +116,11 @@ class Tournament:
         self.is_active = False
 
         """End the current session"""
-        user = self.update.effective_user
-        session_id = db.get_most_recent_session_by_player(self.sql_connection, user.id)
+        session_id = db.get_most_recent_session_by_chat(self.sql_connection, self.chat_id)
 
         if session_id is None:
             print("No active session found to end.")
-
-        db.end_session(self.sql_connection, session_id)
+        else:
+            db.end_session(self.sql_connection, session_id)
         await self.send_group_chat("Tournament finished!")
         self.poller.end()
