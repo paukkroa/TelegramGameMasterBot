@@ -76,3 +76,5 @@ async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFA
         else:
             logger.info("Private message, not adding to context")
             return
+        
+# IDEA: Image generation for the bot's responses
