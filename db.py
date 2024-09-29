@@ -229,11 +229,12 @@ def get_chat_members(conn: sqlite3.Connection, chat_id: str) -> list:
     cursor = conn.cursor()
     cursor.execute('''
     SELECT dp.username 
-    FROM R_CHAT_MEMBERS rcm
-    JOIN D_PLAYER dp ON rcm.player_id = dp.player_id
+    FROM D_PLAYER dp
+    JOIN R_CHAT_MEMBERS rcm ON dp.player_id = rcm.player_id
     WHERE rcm.chat_id = ?
     ''', (chat_id,))
     usernames = cursor.fetchall()
+    usernames = [username[0] for username in usernames]
     return usernames
 
 # TODO: Use hashing for player_id and chat_id for improved security

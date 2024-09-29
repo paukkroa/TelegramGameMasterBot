@@ -1,7 +1,6 @@
 import logging
 import os
 import db
-import ollama
 
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
@@ -12,8 +11,8 @@ from games.GuessNumber import GuessNumber
 from games.ChallengeGame import ChallengeGame
 from games.GuessNumber import GuessNumber
 
-from llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT
 from utils import get_username_by_id
+from ai_utils.llm import generic_message_llm_handler
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
 BOT_NAME = "roopentestibot"
@@ -28,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 sql_connection = db.connect()
 current_waitlists = dict()
+ongoing_tournaments = dict()
 
 """
 ______ _   _ _   _ _____ _____ _____ _____ _   _  _____ 
@@ -50,8 +50,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # These functions have unique constraints so they will not add duplicates
     db.create_chat(sql_connection, chat_id, chat_name)
     db.insert_player(sql_connection, user.id, user.username)
-    db.add_player_to_chat(sql_connection, user.id, chat_id)
-    db.add_player_to_chat(sql_connection, BOT_TG_ID, chat_id)
+    db.add_player_to_chat(sql_connection, chat_id, user.id)
+    db.add_player_to_chat(sql_connection, chat_id, BOT_TG_ID)
 
     if update.message.chat.type != 'group':
         message = rf"Hi {user.mention_html()}! Are you ready to start playing? Add me to a group chat with your friends and press /start there. Press /help for more information."
@@ -62,7 +62,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             reply_markup=ForceReply(selective=True),
         )
 
-# TODO: Add list of commands and their descriptions
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
     user = update.effective_user
@@ -142,12 +141,15 @@ async def list_all_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     players = db.get_all_players(sql_connection)
     await update.message.reply_text(str(players))
 
-# TODO: Fix this
 async def list_group_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a list of all registered players in the current chat"""
-    # TODO: get from actual session and make response cleaner
-    players = db.get_chat_members(sql_connection, update.effective_chat.id)
-    await update.message.reply_text(str(players))    
+    chat_id = update.effective_chat.id
+    players = db.get_chat_members(sql_connection, chat_id)
+    players_str = "Group members: "
+    for player in players:
+        players_str += f"{player}, "
+    players_str = players_str[:-2]
+    await update.message.reply_text(str(players_str))    
 
 async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
@@ -185,25 +187,36 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         logger.info(f"Adding player {player_id} to session {session_id}")
         db.add_player_to_session(sql_connection, session_id, player_id)
 
-    # TODO: test if this works as intended. The session id should keep it in check(?)
     tournament = Tournament(session_id, waitlist.player_ids, number_of_games, update, context, sql_connection, BOT_TG_ID)
+    ongoing_tournaments[chat_id] = tournament
     logger.info(f"Tournament {tournament}")
 
     waitlist.clear() # Is this needed anymore?
     del current_waitlists[chat_id]
+    del waitlist
     await tournament.start()
 
 async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """End the current session"""
     chat_id = update.effective_chat.id
-    session_id = db.get_most_recent_session_by_chat(sql_connection, chat_id)
-
-    if session_id is None:
-        await update.message.reply_text("No active session found to end.")
+    try:
+        tournament = ongoing_tournaments[chat_id]
+        logger.info(f"Tournament found for chat {chat_id}: {tournament}")
+    except KeyError:
+        logger.info(f"No tournament found for chat {chat_id}, checking for open sessions")
+        session_id = db.get_most_recent_session_by_chat(sql_connection, chat_id)
+        if session_id is not None:
+            db.end_session(sql_connection, session_id)
+            await update.message.reply_text("Session has been ended.")
+        else:
+            await update.message.reply_text("No active tournament found to end.")
         return
+    
+    await tournament.end()
+    del ongoing_tournaments[chat_id]
+    del tournament
 
-    db.end_session(sql_connection, session_id)
-    await update.message.reply_text(f"Session {session_id} has been ended.")
+    await update.message.reply_text(f"Tournament has been ended.")
 
 # TODO: Fix the below functions to work with the current_waitlist dict
 # or delete them completely
@@ -218,71 +231,8 @@ async def handle_challenge_game_start(update: Update, context: ContextTypes.DEFA
     logger.info(f"Challenge game start")
     await game.start()
 
-# TODO: Add command to end the tournament
-
-### LLM Functions
-
-async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    msg = update.message.text
-    # Remove bot mention from the message
-    msg = msg.replace(f'@{BOT_NAME}', '')
-    sender_id = update.effective_user.id
-    sender_name = await get_username_by_id(sender_id, context)
-    session_id = db.get_most_recent_session_by_player(sql_connection, sender_id)
-
-    # No ongoing session, respond if needed
-    if session_id is None:
-        logger.info(f"User message does not belong to any active session")
-        # Private message, respond directly
-        if update.message.chat.type != 'group' or f'@{BOT_NAME}' in update.message.text:
-            response = ollama.chat(model=LLM_MODEL, messages=[
-                {
-                'role': 'system',
-                'content': SYS_PROMPT_NO_CONTEXT,
-                },
-                {
-                    'role': 'user',
-                    'content': f"User name: {sender_name}, User message: {msg}",
-                },
-            ])
-            llm_response = response['message']['content']
-            await update.message.reply_text(llm_response)
-        
-    # Ongoing session, handle context
-    else:
-        logger.info(f"Received message with session_id: {session_id}")
-        # If the message is from a group, only respond if the bot is mentioned
-        # then we only want to add message to the context
-        if update.message.chat.type == 'group' and f'@{BOT_NAME}' in update.message.text:
-            db.add_message_to_session_context(sql_connection, session_id, update.effective_user.id, msg)
-            logger.info(f"Added message from sender ({sender_id} to session ({session_id})")
-            context = db.get_session_messages(sql_connection, session_id)
-            logger.info(f"Retrieved context from session ({session_id} to model: {context})")
-            response = ollama.chat(model=LLM_MODEL, messages=[
-                {
-                'role': 'system',
-                'content': SYS_PROMPT_WITH_CONTEXT,
-                },
-                {
-                    'role': 'user',
-                    'content': f"User name: {sender_name}, User message: {msg}, Context: {context}",
-                },
-            ])
-            llm_response = response['message']['content']
-            db.add_message_to_session_context(sql_connection, session_id, BOT_TG_ID, llm_response)
-            await update.message.reply_text(llm_response)
-
-        
-        # The bot is not mentioned but the message is from a group, add the message to the context
-        elif update.message.chat.type == 'group' and f'@{BOT_NAME}' not in update.message.text:
-            db.add_message_to_session_context(sql_connection, session_id, update.effective_user.id, msg)
-            logger.info(f"Added message from sender ({sender_id} to session ({session_id})")
-            return
-        
-        # Most likely a private message, let's not add those 
-        else:
-            logger.info("Private message, not adding to context")
-            return
+async def handle_generic_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await generic_message_llm_handler(update, context, sql_connection, BOT_NAME, BOT_TG_ID)
 
 """
 ___  ___  ___  _____ _   _   _     _____  ___________ 
@@ -331,7 +281,7 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_member))
     # Handle generic group messages and respond with LLM
     application.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND & ~filters.ChatType.PRIVATE, generic_message_llm_handler)
+        filters.TEXT & ~filters.COMMAND & ~filters.ChatType.PRIVATE, handle_generic_message)
     )
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
