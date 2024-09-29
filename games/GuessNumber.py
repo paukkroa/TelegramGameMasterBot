@@ -1,8 +1,7 @@
 import db
-from db import *
-from telegram import ForceReply, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
-from typing import List, Callable
+from telegram import Update
+from telegram.ext import ContextTypes, MessageHandler, filters
+from typing import Callable
 import random
 import sqlite3
 
@@ -18,7 +17,7 @@ class GuessNumber(Game):
                  context: ContextTypes.DEFAULT_TYPE,
                  is_part_of_tournament: bool = False, 
                  start_next_game: Callable[[], None] = None,
-                 sql_connection: sqlite3.Connection = connect(), 
+                 sql_connection: sqlite3.Connection = db.connect(),
                  session_id: str = None, 
                  bot_tg_id: str = None):
         super().__init__(name="Guess number", 

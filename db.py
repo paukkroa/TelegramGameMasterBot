@@ -456,9 +456,9 @@ def get_player_session_stats(conn: sqlite3.Connection, session_id: str, player_i
     cursor.execute(f'''
         SELECT player_id, points, drink_units, games
         FROM R_SESSION_PLAYERS 
-        WHERE session_id = {session_id} AND player_id = {player_id}
+        WHERE session_id = "{session_id}" AND player_id = {player_id}
     ''')
-    result = cursor.fetchall()
+    result = cursor.fetchone()
     return {
         'player_id': result[0],
         'points': result[1],
@@ -466,7 +466,7 @@ def get_player_session_stats(conn: sqlite3.Connection, session_id: str, player_i
         'games': result[3]
     }
 
-def get_player_all_time_stats(conn: sqlite3.Connection, session_id: str, player_id: int):
+def get_player_all_time_stats(conn: sqlite3.Connection, player_id: int):
     cursor = conn.cursor()
     cursor.execute(f'''
         SELECT player_id, SUM(points) AS total_points, SUM(drink_units) AS total_drink_units, 
@@ -484,3 +484,4 @@ def get_player_all_time_stats(conn: sqlite3.Connection, session_id: str, player_
         'total_tournaments': result[4]
     }
 
+# TODO: get group stats

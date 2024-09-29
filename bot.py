@@ -3,8 +3,8 @@ import os
 import db
 import ollama
 
-from telegram import ForceReply, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram import ForceReply, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 
 from Waitlist import Waitlist
 from Tournament import Tournament
@@ -14,6 +14,7 @@ from games.GuessNumber import GuessNumber
 
 from llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT
 from utils import get_username_by_id
+from callback_handler import callback_query_handler
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
 BOT_NAME = "roopentestibot"
@@ -228,6 +229,27 @@ async def handle_challenge_game_start(update: Update, context: ContextTypes.DEFA
 
 # TODO: Add command to end the tournament
 
+async def get_player_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    keyboard = [
+        [
+            InlineKeyboardButton('Session', callback_data='stats:player_session'),
+            InlineKeyboardButton('All-time', callback_data='stats:player_alltime')
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Options: ', reply_markup=reply_markup)
+
+async def get_group_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    keyboard = [
+        [
+            InlineKeyboardButton('Session', callback_data='stats:group_session'),
+            InlineKeyboardButton('All-time', callback_data='stats:group_alltime')
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Options: ', reply_markup=reply_markup)
+
+
 ### LLM Functions
 
 async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -334,7 +356,12 @@ def main() -> None:
     # Games for testing
     application.add_handler(CommandHandler("numbergame", handle_number_game_start))
     application.add_handler(CommandHandler("challenges", handle_challenge_game_start))
-    
+    # Retrieve statistics
+    application.add_handler(CommandHandler("stats_a", get_group_stats))
+    application.add_handler(CommandHandler("stats_p", get_player_stats))
+    # General keyboard option handler
+    application.add_handler(CallbackQueryHandler(callback_query_handler))
+
     # Track users who join the group and get their ids
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_member))
     # Handle generic group messages and respond with LLM

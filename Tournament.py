@@ -43,8 +43,6 @@ class Tournament:
             await self.start_next_game()
 
         return
-        # TEST
-        await self.games[0].start()
 
     async def start_next_game(self) -> None:
         if self.current_game_index < len(self.games):
