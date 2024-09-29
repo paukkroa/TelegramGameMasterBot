@@ -35,11 +35,15 @@ class Game:
         await self.send_chat(msg)
 
     async def send_group_chat(self, message: str):
-        db.add_message_to_session_context(self.sql_connection, self.session_id, self.bot_tg_id_str, message)
+        if self.session_id:
+            db.add_message_to_session_context(self.sql_connection, self.session_id, self.bot_tg_id_str, message)
+
         await self.context.bot.send_message(chat_id=self.chat_id, text=message)
 
     async def send_player_chat(self, user_id: int, message: str):
-        db.add_message_to_session_context(self.sql_connection, self.session_id, self.bot_tg_id_str, message)
+        if self.session_id:
+            db.add_message_to_session_context(self.sql_connection, self.session_id, self.bot_tg_id_str, message)
+
         await self.context.bot.send_message(chat_id=user_id, text=message)
 
     def add_handlers(self):

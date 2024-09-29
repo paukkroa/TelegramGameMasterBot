@@ -91,6 +91,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
         session_id TEXT NOT NULL,
         player_id INTEGER,
         points INTEGER DEFAULT 0,
+        drink_units FLOAT DEFAULT 0,
+        games INTEGER DEFAULT 0,
         iby TEXT DEFAULT 'system',
         uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -433,3 +435,89 @@ def get_most_recent_session_by_chat(conn: sqlite3.Connection, chat_id: str) -> s
         return session_id[0]
     except:
         return None
+
+def add_drinks_to_player(conn: sqlite3.Connection, session_id: str, player_id: int, drink_units: float) -> None:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        UPDATE R_SESSION_PLAYERS SET drink_units = drink_units + {drink_units} 
+        WHERE session_id = {session_id} AND player_id = {player_id}
+    ''')
+    conn.commit()
+
+def increase_player_game_count(conn: sqlite3.Connection, session_id: str, player_id: int, games: int) -> None:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        UPDATE R_SESSION_PLAYERS SET games = games + {games} 
+        WHERE session_id = {session_id} AND player_id = {player_id}
+    ''')
+    conn.commit()
+
+def get_player_session_stats(conn: sqlite3.Connection, session_id: str, player_id: int) -> dict:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        SELECT player_id, points, drink_units, games
+        FROM R_SESSION_PLAYERS 
+        WHERE session_id = "{session_id}" AND player_id = {player_id}
+    ''')
+    result = cursor.fetchone()
+    return {
+        'player_id': result[0],
+        'points': result[1],
+        'drink_units': result[2],
+        'games': result[3]
+    }
+
+def get_player_all_time_stats(conn: sqlite3.Connection, player_id: int) -> dict:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        SELECT player_id, SUM(points) AS total_points, SUM(drink_units) AS total_drink_units, 
+            SUM(games) AS total_games, COUNT(DISTINCT session_id) AS total_tournaments
+        FROM R_SESSION_PLAYERS 
+        WHERE player_id = {player_id}
+        GROUP BY player_id
+    ''')
+    result = cursor.fetchone()
+    return {
+        'player_id': result[0],
+        'total_points': result[1],
+        'total_drink_units': result[2],
+        'total_games': result[3],
+        'total_tournaments': result[4]
+    }
+
+# TODO: get group stats
+def get_group_session_stats(conn: sqlite3.Connection, session_id: str, chat_id: int) -> dict:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        SELECT SUM (RSP.points) AS total_points, SUM(RSP.drink_units) AS total_drink_units,
+            SUM (RSP.games) AS total_games, COUNT (DISTINCT RSP.session_id) AS total_tournaments
+        FROM R_CHAT_MEMBERS AS RCM
+        INNER JOIN R_SESSION_PLAYERS AS RSP ON RCM.player_id = RSP.player_id
+        WHERE RCM.chat_id = {chat_id}
+            AND RSP.session_id = {session_id}
+    ''')
+    result = cursor.fetchone()
+    return {
+        'chat_id': result[0],
+        'total_points': result[1],
+        'total_drink_units': result[2],
+        'total_games': result[3]
+    }
+
+def get_group_all_time_stats(conn: sqlite3.Connection, chat_id: int) -> dict:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        SELECT SUM (RSP.points) AS total_points, SUM(RSP.drink_units) AS total_drink_units,
+            SUM (RSP.games) AS total_games, COUNT (DISTINCT RSP.session_id) AS total_tournaments
+        FROM R_CHAT_MEMBERS AS RCM
+        INNER JOIN R_SESSION_PLAYERS AS RSP ON RCM.player_id = RSP.player_id
+        WHERE RCM.chat_id = {chat_id}
+    ''')
+    result = cursor.fetchone()
+    return {
+        'chat_id': result[0],
+        'total_points': result[1],
+        'total_drink_units': result[2],
+        'total_games': result[3],
+        'total_tournaments': result[4]
+    }

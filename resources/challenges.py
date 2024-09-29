@@ -2,26 +2,97 @@
 
 # easy or fast
 challenges_easy = [
-    'Take 2 swigs',
-    'Take 3 swigs',
-    'Take 5 swigs',
-    'Give out 5 swigs',
-    'Tell a joke'
+    {
+        'name': 'Take 2 swigs',
+        'swigs': 2,
+        'shots': 0,
+        'points': 1
+    },
+    {
+        'name': 'Take 3 swigs',
+        'swigs': 3,
+        'shots': 0,
+        'points': 1
+    },
+{
+        'name': 'Take 5 swigs',
+        'swigs': 5,
+        'shots': 0,
+        'points': 1
+    },
+    {
+        'name': 'Give out 5 swigs',
+        'swigs': 0,
+        'shots': 0,
+        'points': 1
+    },
+    {
+        'name': 'Tell a joke',
+        'swigs': 0,
+        'shots': 0,
+        'points': 1
+    }
 ]
 
 challenges_medium = [
-    'Take 10 swigs',
-    'Give out 10 swigs',
-    'Decide a subgroup to take 6 swigs each',
-    'Ever never I have?',
-    'Do 10 push-ups'
+    {
+        'name': 'Take 10 swigs',
+        'swigs': 10,
+        'shots': 0,
+        'points': 3
+    },
+    {
+        'name': 'Give out 10 swigs',
+        'swigs': 0,
+        'shots': 0,
+        'points': 3
+    },
+    {
+        'name': 'Decide a subgroup to take 6 swigs each',
+        'swigs': 0,
+        'shots': 0,
+        'points': 3
+    },
+    {
+        'name': 'Ever never I have?',
+        'swigs': 0,
+        'shots': 0,
+        'points': 3
+    },
+    {
+        'name': 'Do 10 push-ups',
+        'swigs': 0,
+        'shots': 0,
+        'points': 3
+    }
 ]
 
 challenges_hard = [
-    'Give out a shot',
-    'Take a shot',
-    'Hug a tree for 40 seconds',
-    'Get a cocktail made for you (bad)'
+    {
+        'name': 'Give out a shot',
+        'swigs': 0,
+        'shots': 0,
+        'points': 5
+    },
+    {
+        'name': 'Take a shot',
+        'swigs': 0,
+        'shots': 1,
+        'points': 5
+    },
+    {
+        'name': 'Hug a tree for 40 seconds',
+        'swigs': 0,
+        'shots': 0,
+        'points': 5
+    },
+    {
+        'name': 'Get a cocktail made for you (bad)',
+        'swigs': 16,
+        'shots': 0,
+        'points': 5
+    }
 ]
 
+all_challenges_by_level = [challenges_easy, challenges_medium, challenges_hard]
 all_challenges = challenges_easy + challenges_medium + challenges_hard
