@@ -38,11 +38,18 @@ async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_T
         await context.bot.send_message(chat_id=chat.id, text=msg)
 
     elif query.data == 'stats:group_session':
-        # TODO: get data
-        msg = f"Session stats for {chat_name}: "
+        stats = db.get_group_session_stats(sql_connection, session_id, chat.id)
+        msg = (f"Session stats for {chat_name}:\n\n"
+               f"Points: {stats['total_points']}\n"
+               f"Drink units: {stats['total_drink_units']}\n"
+               f"Games: {stats['total_games']}")
         await context.bot.send_message(chat_id=chat.id, text=msg)
 
     elif query.data == 'stats:group_alltime':
-        # TODO: get data
-        msg = f"All-time stats for {chat_name}: "
+        stats = db.get_group_all_time_stats(sql_connection, chat.id)
+        msg = (f"All-time stats for {chat_name}:\n\n"
+               f"Points: {stats['total_points']}\n"
+               f"Drink units: {stats['total_drink_units']}\n"
+               f"Games: {stats['total_games']}\n"
+               f" Tournaments: {stats['total_tournaments']}")
         await context.bot.send_message(chat_id=chat.id, text=msg)
