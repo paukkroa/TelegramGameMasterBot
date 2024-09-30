@@ -3,11 +3,11 @@ from telegram.ext import CommandHandler, ContextTypes
 import random
 from typing import Callable
 import sqlite3
-import db
 
+import db
 from games.Game import Game
 from resources.challenges import all_challenges_by_level
-from utils import get_username_by_id, convert_swigs_to_units, convert_shots_to_units
+from utils.helpers import get_username_by_id, convert_swigs_to_units, convert_shots_to_units
 
 class ChallengeGame(Game):
     def __init__(self, 

@@ -3,10 +3,11 @@ from telegram.ext import CommandHandler, ContextTypes
 from typing import Callable
 import random
 import sqlite3
-import db
 
+import db
+from utils.helpers import get_username_by_id
 from games.Game import Game
-from utils import get_username_by_id
+
 class Waterfall(Game):
 
     def __init__(self, 
@@ -37,7 +38,6 @@ class Waterfall(Game):
 
         self.handlers.append(CommandHandler("done", self.end))
         self.add_handlers()
-
 
     async def end(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.send_group_chat("Waterfall ended.")

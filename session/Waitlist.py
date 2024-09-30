@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from utils import get_username_by_id
+
+from utils.helpers import get_username_by_id
 
 class Waitlist:
     def __init__(self, chat_id: int):
