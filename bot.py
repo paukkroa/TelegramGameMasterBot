@@ -145,7 +145,7 @@ async def list_all_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def list_group_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a list of all registered players in the current chat"""
     chat_id = update.effective_chat.id
-    players = db.get_chat_members(sql_connection, chat_id)
+    players = db.get_chat_member_usernames(sql_connection, chat_id)
     players_str = "Group members: "
     for player in players:
         players_str += f"{player}, "
@@ -205,7 +205,7 @@ async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         logger.info(f"Tournament found for chat {chat_id}: {tournament}")
     except KeyError:
         logger.info(f"No tournament found for chat {chat_id}, checking for open sessions")
-        session_id = db.get_most_recent_session_by_chat(sql_connection, chat_id)
+        session_id = db.get_latest_ongoing_session_by_chat(sql_connection, chat_id)
         if session_id is not None:
             db.end_session(sql_connection, session_id)
             await update.message.reply_text("Session has been ended.")
@@ -243,7 +243,7 @@ async def handle_challenge_game_start(update: Update, context: ContextTypes.DEFA
 async def get_player_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
         [
-            InlineKeyboardButton('Session', callback_data='stats:player_session'),
+            InlineKeyboardButton('Tournament', callback_data='stats:player_session'),
             InlineKeyboardButton('All-time', callback_data='stats:player_alltime')
         ]
     ]
@@ -253,8 +253,30 @@ async def get_player_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def get_group_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
         [
-            InlineKeyboardButton('Session', callback_data='stats:group_session'),
+            InlineKeyboardButton('Tournament', callback_data='stats:group_session'),
             InlineKeyboardButton('All-time', callback_data='stats:group_alltime')
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Options: ', reply_markup=reply_markup)
+
+async def get_session_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    keyboard = [
+        [
+            InlineKeyboardButton('Points', callback_data='ranking:session_points'),
+            InlineKeyboardButton('Drinks', callback_data='ranking:session_drinks')
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Options: ', reply_markup=reply_markup)
+
+async def get_all_time_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    keyboard = [
+        [
+            InlineKeyboardButton('Points', callback_data='ranking:alltime_points'),
+            InlineKeyboardButton('Drinks', callback_data='ranking:alltime_drinks'),
+            InlineKeyboardButton('Games', callback_data='ranking:alltime_games'),
+            InlineKeyboardButton('Tournaments', callback_data='ranking:alltime_tournaments')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -306,8 +328,10 @@ def main() -> None:
     application.add_handler(CommandHandler("numbergame", handle_number_game_start))
     application.add_handler(CommandHandler("challenges", handle_challenge_game_start))
     # Retrieve statistics
-    application.add_handler(CommandHandler("stats_a", get_group_stats))
+    application.add_handler(CommandHandler("stats_g", get_group_stats))
     application.add_handler(CommandHandler("stats_p", get_player_stats))
+    application.add_handler(CommandHandler("rank_s", get_session_ranking))
+    application.add_handler(CommandHandler("rank_a", get_all_time_ranking))
     # General keyboard option handler
     application.add_handler(CallbackQueryHandler(callback_query_handler))
 
