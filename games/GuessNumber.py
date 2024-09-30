@@ -81,27 +81,26 @@ class GuessNumber(Game):
         if self.session_id:
             db.add_points_to_player(self.sql_connection, self.session_id, winner_id, 5)
 
-        message = f'''
-        Winner is {winner_username}! Secret number was {self.target_number} and they guessed {sorted_guesses[0][1]}.
-        '''
+        message = (f"Winner is {winner_username}! Secret number was {self.target_number} "
+                   f"and they guessed {sorted_guesses[0][1]}.")
 
         if len(sorted_guesses) >= 2:
             second_id = sorted_guesses[1][0]
             second_username = await get_username_by_id(second_id, self.context)
-            message += f'Second was {second_username}'
+            message += f' Second was {second_username}.'
             if self.session_id:
                 db.add_points_to_player(self.sql_connection, self.session_id, second_id, 3)
 
         if len(sorted_guesses) >= 3:
             third_id = sorted_guesses[2][0]
             third_username = await get_username_by_id(third_id, self.context)
-            message += f'and third was {third_username}'
+            message += f' Third was {third_username}.'
             if self.session_id:
                 db.add_points_to_player(self.sql_connection, self.session_id, third_id, 1)
 
         # AWARD DRINKS
 
-        message += f'\n\n Drinks awarded:\n'
+        message += f'\n\nDrinks awarded:\n'
 
         for player_id, guess in reversed_guesses:
             username = await get_username_by_id(player_id, self.context)
