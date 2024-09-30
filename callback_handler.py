@@ -47,7 +47,7 @@ async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_T
                f"Points: {stats['total_points']}\n"
                f"Drink units: {int(round(stats['total_drink_units'], 0))}\n"
                f"Games: {stats['total_games']}\n"
-               f" Tournaments: {stats['total_tournaments']}")
+               f"Tournaments: {stats['total_tournaments']}")
         await context.bot.send_message(chat_id=chat.id, text=msg)
 
     elif query.data == 'stats:group_session':
@@ -64,7 +64,7 @@ async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_T
                f"Points: {stats['total_points']}\n"
                f"Drink units: {int(round(stats['total_drink_units'], 0))}\n"
                f"Games: {stats['total_games']}\n"
-               f" Tournaments: {stats['total_tournaments']}")
+               f"Tournaments: {stats['total_tournaments']}")
         await context.bot.send_message(chat_id=chat.id, text=msg)
 
     elif query.data == 'ranking:session_points':
