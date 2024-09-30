@@ -4,12 +4,8 @@ from typing import Type
 import random
 import sqlite3
 
-from utils import get_username_by_id
-from games.GuessNumber import GuessNumber
-from games.ChallengeGame import ChallengeGame
-from games.Waterfall import Waterfall
-from games.Game import Game
-from EventPoller import EventPoller
+from games import ChallengeGame, GuessNumber, Waterfall, Game
+from session.EventPoller import EventPoller
 import db
 
 class Tournament:

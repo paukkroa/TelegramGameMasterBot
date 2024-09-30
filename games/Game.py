@@ -1,8 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from typing import Callable
-import db
 import sqlite3
+import db
 
 class Game:
     def __init__(self, 
@@ -32,7 +32,7 @@ class Game:
     async def start(self):
         msg = f"Let's play {self.name}!"
         db.add_message_to_session_context(self.sql_connection, self.session_id, self.bot_tg_id_str, msg)
-        await self.send_chat(msg)
+        await self.send_group_chat(msg)
 
     async def send_group_chat(self, message: str):
         if self.session_id:

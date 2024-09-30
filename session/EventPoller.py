@@ -4,7 +4,7 @@ import random
 import sqlite3
 
 import db
-from utils import get_username_by_id, convert_swigs_to_units
+from utils.helpers import get_username_by_id, convert_swigs_to_units
 from resources.phrases import all_phrases
 from resources.challenges import challenges_easy
 

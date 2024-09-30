@@ -1,13 +1,12 @@
-import db
 from telegram import Update
 from telegram.ext import ContextTypes, MessageHandler, filters
 from typing import Callable
 import random
 import sqlite3
 
-from utils import get_username_by_id, convert_swigs_to_units
+import db
+from utils.helpers import get_username_by_id, convert_swigs_to_units
 from games.Game import Game
-
 
 class GuessNumber(Game):
     def __init__(self, 

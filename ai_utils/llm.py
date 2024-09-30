@@ -1,18 +1,14 @@
 import ollama
 from telegram import Update
 from telegram.ext import ContextTypes
-import logging
 import sqlite3
 
 import db
 from ai_utils.llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT
-from utils import get_username_by_id
+from utils.helpers import get_username_by_id
+from utils.logger import get_logger
 
-# LOGGING
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-# set higher logging level for httpx to avoid all GET and POST requests being logged
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # TODO: Add rolling context window
 async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, sql_connection: sqlite3.Connection, bot_name: str, bot_tg_id: int) -> None:
