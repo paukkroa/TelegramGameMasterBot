@@ -4,7 +4,8 @@ from typing import Type
 import random
 import sqlite3
 
-from games import ChallengeGame, GuessNumber, Waterfall, Game
+from games import ChallengeGame, GuessNumber, Waterfall
+from games.Game import Game
 from session.EventPoller import EventPoller
 import db
 
