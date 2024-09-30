@@ -52,9 +52,9 @@ class ChallengeGame(Game):
 
         # Determine challenge level - 0 = easy, 2 = hard
         challenge_level = random.randint(0, 2)
-        challenges = [all_challenges_by_level[challenge_level]]
+        challenges = all_challenges_by_level[challenge_level]
 
-        challenge = random.sample(1, challenges)[0]
+        challenge = random.choice(challenges)
 
         user_index = random.randint(0, len(self.player_ids) - 1)
         user_id = self.player_ids[user_index]

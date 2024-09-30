@@ -116,7 +116,7 @@ class Tournament:
         self.is_active = False
 
         """End the current session"""
-        session_id = db.get_most_recent_session_by_chat(self.sql_connection, self.chat_id)
+        session_id = db.get_latest_ongoing_session_by_chat(self.sql_connection, self.chat_id)
 
         if session_id is None:
             print("No active session found to end.")

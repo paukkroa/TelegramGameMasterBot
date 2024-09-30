@@ -21,7 +21,7 @@ async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFA
     msg = msg.replace(f'@{bot_name}', '')
     sender_id = update.effective_user.id
     sender_name = await get_username_by_id(sender_id, context)
-    session_id = db.get_most_recent_session_by_player(sql_connection, sender_id)
+    session_id = db.get_latest_ongoing_session_by_player(sql_connection, sender_id)
 
     # No ongoing session, respond if needed
     if session_id is None:

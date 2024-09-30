@@ -227,7 +227,7 @@ def remove_player_from_chat(conn: sqlite3.Connection, chat_id: str, player_id: i
     conn.commit()
 
 # TODO: Use hashing for chat_id for improved security
-def get_chat_members(conn: sqlite3.Connection, chat_id: str) -> list:
+def get_chat_member_usernames(conn: sqlite3.Connection, chat_id: str) -> list:
     cursor = conn.cursor()
     cursor.execute('''
     SELECT dp.username 
@@ -238,6 +238,15 @@ def get_chat_members(conn: sqlite3.Connection, chat_id: str) -> list:
     usernames = cursor.fetchall()
     usernames = [username[0] for username in usernames]
     return usernames
+
+def get_chat_member_ids(conn: sqlite3.Connection, chat_id: str) -> list:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT player_id FROM R_CHAT_MEMBERS WHERE chat_id = ?
+    ''', (chat_id,))
+    member_ids = cursor.fetchall()
+    member_ids = [id[0] for id in member_ids]
+    return member_ids
 
 # TODO: Use hashing for player_id and chat_id for improved security
 def insert_player_fact(conn: sqlite3.Connection, player_id: int, fact: str) -> int:
@@ -359,7 +368,7 @@ def get_player_points(conn: sqlite3.Connection, session_id: str, player_id: int)
 def add_points_to_player(conn: sqlite3.Connection, session_id: str, player_id: int, points: int) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
-    UPDATE R_SESSION_PLAYERS SET points = points + {points} WHERE session_id = {session_id} AND player_id = {player_id}
+    UPDATE R_SESSION_PLAYERS SET points = points + {points} WHERE session_id = "{session_id}" AND player_id = {player_id}
     ''')
     conn.commit()
 
@@ -404,7 +413,7 @@ def get_messages_from_sender(conn: sqlite3.Connection, session_id: str, sender_i
 
 # TODO: Use hashing for player_id for improved security
 # IMPROVEMENT: Replace this command with a function to get the most recent by chat_id
-def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) -> int:
+def get_latest_ongoing_session_by_player(conn: sqlite3.Connection, player_id: int) -> int:
     cursor = conn.cursor()
     cursor.execute('''
     SELECT rsp.session_id 
@@ -420,7 +429,7 @@ def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) 
     except:
         return None
     
-def get_most_recent_session_by_chat(conn: sqlite3.Connection, chat_id: str) -> str:
+def get_latest_ongoing_session_by_chat(conn: sqlite3.Connection, chat_id: str) -> str:
     cursor = conn.cursor()
     cursor.execute('''
     SELECT session_id 
@@ -436,11 +445,26 @@ def get_most_recent_session_by_chat(conn: sqlite3.Connection, chat_id: str) -> s
     except:
         return None
 
+def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) -> None:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT session_id
+    FROM R_SESSION_PLAYERS rsp
+    WHERE player_id = ?
+    ORDER BY idate DESC
+    LIMIT 1
+    ''',(player_id,))
+    try:
+        session_id = cursor.fetchone()
+        return session_id[0]
+    except:
+        return None
+
 def add_drinks_to_player(conn: sqlite3.Connection, session_id: str, player_id: int, drink_units: float) -> None:
     cursor = conn.cursor()
     cursor.execute(f'''
         UPDATE R_SESSION_PLAYERS SET drink_units = drink_units + {drink_units} 
-        WHERE session_id = {session_id} AND player_id = {player_id}
+        WHERE session_id = "{session_id}" AND player_id = {player_id}
     ''')
     conn.commit()
 
@@ -448,7 +472,7 @@ def increase_player_game_count(conn: sqlite3.Connection, session_id: str, player
     cursor = conn.cursor()
     cursor.execute(f'''
         UPDATE R_SESSION_PLAYERS SET games = games + {games} 
-        WHERE session_id = {session_id} AND player_id = {player_id}
+        WHERE session_id = "{session_id}" AND player_id = {player_id}
     ''')
     conn.commit()
 
@@ -486,15 +510,15 @@ def get_player_all_time_stats(conn: sqlite3.Connection, player_id: int) -> dict:
     }
 
 # TODO: get group stats
-def get_group_session_stats(conn: sqlite3.Connection, session_id: str, chat_id: int) -> dict:
+def get_group_session_stats(conn: sqlite3.Connection, session_id: str, chat_id: str) -> dict:
     cursor = conn.cursor()
     cursor.execute(f'''
-        SELECT SUM (RSP.points) AS total_points, SUM(RSP.drink_units) AS total_drink_units,
-            SUM (RSP.games) AS total_games, COUNT (DISTINCT RSP.session_id) AS total_tournaments
-        FROM R_CHAT_MEMBERS AS RCM
-        INNER JOIN R_SESSION_PLAYERS AS RSP ON RCM.player_id = RSP.player_id
-        WHERE RCM.chat_id = {chat_id}
-            AND RSP.session_id = {session_id}
+        SELECT chat_id, SUM (rsp.points) AS total_points, SUM(rsp.drink_units) AS total_drink_units,
+            SUM (rsp.games) AS total_games
+        FROM R_CHAT_MEMBERS rcm
+        INNER JOIN R_SESSION_PLAYERS AS rsp ON rcm.player_id = rsp.player_id
+        WHERE rcm.chat_id = {chat_id}
+            AND rsp.session_id = "{session_id}"
     ''')
     result = cursor.fetchone()
     return {
@@ -504,14 +528,14 @@ def get_group_session_stats(conn: sqlite3.Connection, session_id: str, chat_id: 
         'total_games': result[3]
     }
 
-def get_group_all_time_stats(conn: sqlite3.Connection, chat_id: int) -> dict:
+def get_group_all_time_stats(conn: sqlite3.Connection, chat_id: str) -> dict:
     cursor = conn.cursor()
     cursor.execute(f'''
-        SELECT SUM (RSP.points) AS total_points, SUM(RSP.drink_units) AS total_drink_units,
-            SUM (RSP.games) AS total_games, COUNT (DISTINCT RSP.session_id) AS total_tournaments
-        FROM R_CHAT_MEMBERS AS RCM
-        INNER JOIN R_SESSION_PLAYERS AS RSP ON RCM.player_id = RSP.player_id
-        WHERE RCM.chat_id = {chat_id}
+        SELECT chat_id, SUM(rsp.points) AS total_points, SUM(rsp.drink_units) AS total_drink_units,
+            SUM(rsp.games) AS total_games, COUNT(DISTINCT rsp.session_id) AS total_tournaments
+        FROM R_CHAT_MEMBERS rcm
+        INNER JOIN R_SESSION_PLAYERS rsp ON rcm.player_id = rsp.player_id
+        WHERE rcm.chat_id = {chat_id}
     ''')
     result = cursor.fetchone()
     return {
@@ -521,3 +545,53 @@ def get_group_all_time_stats(conn: sqlite3.Connection, chat_id: int) -> dict:
         'total_games': result[3],
         'total_tournaments': result[4]
     }
+
+def get_group_session_ranking(conn: sqlite3.Connection, session_id: str, chat_id: str, order_by: str) -> list:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        SELECT rcm.player_id, username, SUM(points) AS points, SUM(drink_units) AS drinks
+        FROM R_CHAT_MEMBERS rcm
+        INNER JOIN R_SESSION_PLAYERS rsp ON rsp.player_id = rcm.player_id
+        INNER JOIN D_PLAYER dp ON dp.player_id = rcm.player_id
+        WHERE chat_id = {chat_id}
+            AND session_id = "{session_id}"
+        GROUP BY rcm.player_id
+        ORDER BY {order_by} DESC
+    ''')
+    players = cursor.fetchall()
+    ranking = [
+        {
+            'player_id': player_id,
+            'username': username,
+            'points': points,
+            'drinks': drinks
+        }
+        for player_id, username, points, drinks in players
+    ]
+    return ranking
+
+def get_group_alltime_ranking(conn: sqlite3.Connection, chat_id: str, order_by: str) -> list:
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        SELECT rcm.player_id, username, SUM(points) AS points, SUM(drink_units) AS drinks, SUM(games) AS games,
+            COUNT(DISTINCT rsp.session_id) AS tournaments
+        FROM R_CHAT_MEMBERS rcm
+        INNER JOIN R_SESSION_PLAYERS rsp ON rsp.player_id = rcm.player_id
+        INNER JOIN D_PLAYER dp ON dp.player_id = rcm.player_id
+        WHERE chat_id = {chat_id}
+        GROUP BY rcm.player_id
+        ORDER BY {order_by} DESC
+    ''')
+    players = cursor.fetchall()
+    ranking = [
+        {
+            'player_id': player_id,
+            'username': username,
+            'points': points,
+            'drinks': drinks,
+            'games': games,
+            'tournaments': tournaments
+        }
+        for player_id, username, points, drinks, games, tournaments in players
+    ]
+    return ranking
