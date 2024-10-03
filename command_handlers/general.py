@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 import db
 
 from ai_utils.llm import generic_message_llm_handler
-from utils.config import sql_connection, BOT_TG_ID, BOT_NAME
+from utils.config import sql_connection, BOT_TG_ID
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -54,4 +54,4 @@ async def list_all_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_text(str(players))
 
 async def handle_generic_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await generic_message_llm_handler(update, context, sql_connection, BOT_NAME, BOT_TG_ID)
+    await generic_message_llm_handler(update, context, sql_connection)
