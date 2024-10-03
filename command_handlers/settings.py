@@ -35,31 +35,27 @@ async def set_chat_to_all_context(update: Update, context: ContextTypes.DEFAULT_
     db.set_chat_to_all_context(sql_connection, chat_id, player_id)
     await update.message.reply_text("Chat context set to all messages.")
 
-async def set_chat_to_static_context(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start_static_window(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Date format: YYYY-MM-DD HH:MM:SS"""
     chat_id = update.effective_chat.id
     player_id = update.effective_user.id
 
     msg_words = update.message.text.split(' ') + ['']
-
-    if len(msg_words) > 1:
-        start_time = str(msg_words[1])
-        if validate_date_string(update, context, start_time):
-            start_time = datetime.fromisoformat(start_time).strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            return
-    else:
-        start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     if len(msg_words) > 2:
-        end_time = str(msg_words[2])
-        if validate_date_string(update, context, end_time):
-            end_time = datetime.fromisoformat(end_time).strftime("%Y-%m-%d %H:%M:%S")
-        else:
+        date = str(msg_words[1])
+        time = str(msg_words[2])
+        if time == '':
+            time = ' 00:00:00'
+        start_time = date + time
+        if not validate_date_string(update, context, start_time):
             return
+        else:
+            logger.info(f"Start time: {start_time}")
     else:
-        end_time = None
-    db.set_chat_to_static_context(sql_connection, chat_id, player_id, start_time, end_time)
+        start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+    db.set_chat_to_static_context(sql_connection, chat_id, player_id, start_time)
     await update.message.reply_text("Chat context set to static window.")
 
 async def end_static_window(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
