@@ -5,7 +5,7 @@ import sqlite3
 
 from db.session_queries import *
 from db.chat_queries import get_chat_settings
-from ai_utils.llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT
+from ai_utils.llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT, SYS_PROMPT_WITH_CONTEXT_SESSION_ONLY
 from utils.helpers import get_username_by_id
 from utils.logger import get_logger
 
