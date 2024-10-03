@@ -179,8 +179,7 @@ def get_all_chat_messages(conn: sqlite3.Connection, chat_id: str) -> list:
     SELECT dp.username, fsc.message 
     FROM R_CHAT_CONTEXT fsc
     JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
-    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
-    WHERE ds.chat_id = ?
+    WHERE fsc.chat_id = ?
     ''', (chat_id,))
     messages = cursor.fetchall()
     formatted_messages = ', '.join([f"{username} said: {message}" for username, message in messages])
@@ -191,8 +190,7 @@ def get_all_chat_messages_from_sender(conn: sqlite3.Connection, chat_id: str, se
     cursor.execute('''
     SELECT fsc.message 
     FROM R_CHAT_CONTEXT fsc
-    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
-    WHERE ds.chat_id = ? AND fsc.sender_id = ?
+    WHERE fsc.chat_id = ? AND fsc.sender_id = ?
     ''', (chat_id, sender_id,))
     messages = cursor.fetchall()
     formatted_messages = ', '.join([f"{message}" for message in messages])
@@ -216,8 +214,7 @@ def get_chat_messages_from_rolling_time_window(conn: sqlite3.Connection, chat_id
     SELECT dp.username, fsc.message, fsc.message_timestamp
     FROM R_CHAT_CONTEXT fsc
     JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
-    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
-    WHERE ds.chat_id = ? AND fsc.idate BETWEEN ? AND ?
+    WHERE fsc.chat_id = ? AND fsc.idate BETWEEN ? AND ?
     ''', (chat_id, start_time, end_time))
     messages = cursor.fetchall()
     formatted_messages = ', '.join([f"At {timestamp} {username} said: {message}" for username, message, timestamp in messages])
@@ -241,8 +238,7 @@ def get_chat_messages_within_time_window(conn: sqlite3.Connection, chat_id: str)
     SELECT dp.username, fsc.message, fsc.message_timestamp
     FROM R_CHAT_CONTEXT fsc
     JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
-    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
-    WHERE ds.chat_id = ? AND fsc.message_timestamp BETWEEN ? AND ?
+    WHERE fsc.chat_id = ? AND fsc.message_timestamp BETWEEN ? AND ?
     ''', (chat_id, start_time, end_time))
     messages = cursor.fetchall()
     formatted_messages = ', '.join([f"At {timestamp} {username} said: {message}" for username, message, timestamp in messages])
@@ -264,13 +260,13 @@ def get_last_n_messages(conn: sqlite3.Connection, chat_id: str, n_messages: int 
 
     # Retrieve the last n messages from R_CHAT_CONTEXT
     cursor.execute('''
-    SELECT dp.username, fsc.message, fsc.message_timestamp
+    SELECT * FROM (SELECT dp.username, fsc.message, fsc.message_timestamp
     FROM R_CHAT_CONTEXT fsc
     JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
-    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
-    WHERE ds.chat_id = ?
+    WHERE fsc.chat_id = ?
     ORDER BY fsc.message_timestamp DESC
-    LIMIT ?
+    LIMIT ?) temp
+    ORDER BY temp.message_timestamp ASC
     ''', (chat_id, n_messages))
     messages = cursor.fetchall()
     
