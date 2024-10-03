@@ -73,14 +73,16 @@ async def set_chat_to_rolling_context(update: Update, context: ContextTypes.DEFA
 
     valid_time_units = list(time_units.keys())
 
-    if len(msg_words) > 1:
+    if len(msg_words) > 2:
         try:
             window_size = int(msg_words[1])
         except:
             await update.message.reply_text("Invalid window size. Please provide a valid integer.")
             return
+    else:
+        window_size = 1
 
-    if len(msg_words) > 2:
+    if len(msg_words) > 3:
         time_unit = str(msg_words[2])
         if time_unit.lower() not in valid_time_units:
             await update.message.reply_text(rf"Invalid time unit. Please provide a valid time unit ({valid_time_units}).")
