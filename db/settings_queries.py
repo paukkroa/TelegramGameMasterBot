@@ -111,7 +111,7 @@ def set_chat_to_rolling_context(conn: sqlite3.Connection, chat_id: str, player_i
     cursor.execute('''
     UPDATE D_CHAT_SETTINGS
     SET context_window_type = 'rolling',
-        rolling_context_window_size = ?
+        rolling_context_window_size = ?,
         uby = ?,
         udate = CURRENT_TIMESTAMP
     WHERE chat_id = ?

@@ -203,13 +203,15 @@ def get_chat_messages_from_rolling_time_window(conn: sqlite3.Connection, chat_id
     ''', (chat_id,))
     rolling_time_window = cursor.fetchone()
     if rolling_time_window:
-        rolling_time_window = rolling_time_window[0]
+        rolling_time_window = int(rolling_time_window[0])
+        logger.info(f"Rolling time window for chat {chat_id} is {rolling_time_window} seconds.")
     else:
         logger.info(f"WARNING - No rolling time window set for chat {chat_id}.")
         rolling_time_window = 0
 
-    end_time = datetime.now()
+    end_time = datetime.utcnow()
     start_time = end_time - timedelta(seconds=rolling_time_window)
+    logger.info(f"Context start time: {start_time}, end time: {end_time}")
     cursor.execute('''
     SELECT dp.username, fsc.message, fsc.message_timestamp
     FROM R_CHAT_CONTEXT fsc
