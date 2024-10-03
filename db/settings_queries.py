@@ -134,7 +134,7 @@ def set_chat_to_session_context(conn: sqlite3.Connection, chat_id: str, player_i
     cursor = conn.cursor()
     cursor.execute('''
     UPDATE D_CHAT_SETTINGS
-    SET context_window_type = 'session'
+    SET context_window_type = 'session',
         uby = ?,
         udate = CURRENT_TIMESTAMP
     WHERE chat_id = ?
@@ -145,7 +145,7 @@ def set_chat_to_no_context(conn: sqlite3.Connection, chat_id: str, player_id: in
     cursor = conn.cursor()
     cursor.execute('''
     UPDATE D_CHAT_SETTINGS
-    SET context_window_type = 'none'
+    SET context_window_type = 'none',
         uby = ?,
         udate = CURRENT_TIMESTAMP
     WHERE chat_id = ?
