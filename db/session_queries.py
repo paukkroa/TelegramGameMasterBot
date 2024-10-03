@@ -1,5 +1,6 @@
 import sqlite3
 import hashlib
+from datetime import datetime, timedelta
 
 def start_session(conn: sqlite3.Connection, chat_id: str) -> str:
     cursor = conn.cursor()
@@ -123,20 +124,35 @@ def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) 
         return None
 
 
-# TODO: Use hashing for session_id and sender_id for improved security
-def add_message_to_session_context(conn: sqlite3.Connection, session_id: str, sender_id: int, message: str) -> None:
+def add_message_to_chat_context(conn: sqlite3.Connection, chat_id: str, sender_id: int, message: str, session_id: str = None) -> None:
     cursor = conn.cursor()
+    
+    # If session_id is not provided, get the latest ongoing session for the chat
+    if session_id is None:
+        cursor.execute('''
+        SELECT session_id 
+        FROM D_SESSION
+        WHERE chat_id = ? 
+        AND ongoing = 1
+        ORDER BY chat_running_id DESC 
+        LIMIT 1
+        ''', (chat_id,))
+        session_id = cursor.fetchone()
+        if session_id:
+            session_id = session_id[0]
+        else:
+            session_id = ''
+
     cursor.execute('''
-    INSERT INTO R_SESSION_CONTEXT (session_id, sender_id, message) VALUES (?, ?, ?)
-    ''', (session_id, sender_id, message))
+    INSERT INTO R_CHAT_CONTEXT (session_id, chat_id, sender_id, message) VALUES (?, ?, ?, ?)
+    ''', (session_id, chat_id, sender_id, message))
     conn.commit()
 
-# TODO: Use hashing for session_id for improved security
 def get_session_messages(conn: sqlite3.Connection, session_id: str) -> str:
     cursor = conn.cursor()
     cursor.execute('''
     SELECT dp.username, fsc.message 
-    FROM R_SESSION_CONTEXT fsc
+    FROM R_CHAT_CONTEXT fsc
     JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
     WHERE fsc.session_id = ?
     ''', (session_id,))
@@ -144,14 +160,82 @@ def get_session_messages(conn: sqlite3.Connection, session_id: str) -> str:
     formatted_messages = ', '.join([f"{username} said: {message}" for username, message in messages])
     return formatted_messages
 
-# TODO: Use hashing for session_id and sender_id for improved security
-def get_messages_from_sender(conn: sqlite3.Connection, session_id: str, sender_id: int) -> list:
+def get_session_messages_from_sender(conn: sqlite3.Connection, session_id: str, sender_id: int) -> list:
     cursor = conn.cursor()
     cursor.execute('''
-    SELECT message FROM R_SESSION_CONTEXT WHERE session_id = ? AND sender_id = ?
+    SELECT message FROM R_CHAT_CONTEXT WHERE session_id = ? AND sender_id = ?
     ''', (session_id, sender_id,))
     messages = cursor.fetchall()
     formatted_messages = ', '.join([f"{message}" for message in messages])
     return formatted_messages
 
+def get_all_chat_messages(conn: sqlite3.Connection, chat_id: str) -> list:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT dp.username, fsc.message 
+    FROM R_CHAT_CONTEXT fsc
+    JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
+    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
+    WHERE ds.chat_id = ?
+    ''', (chat_id,))
+    messages = cursor.fetchall()
+    formatted_messages = ', '.join([f"{username} said: {message}" for username, message in messages])
+    return formatted_messages
 
+def get_all_chat_messages_from_sender(conn: sqlite3.Connection, chat_id: str, sender_id: int) -> list:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT fsc.message 
+    FROM R_CHAT_CONTEXT fsc
+    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
+    WHERE ds.chat_id = ? AND fsc.sender_id = ?
+    ''', (chat_id, sender_id,))
+    messages = cursor.fetchall()
+    formatted_messages = ', '.join([f"{message}" for message in messages])
+    return formatted_messages
+
+def get_chat_messages_from_rolling_time_window(conn: sqlite3.Connection, chat_id: str) -> list:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT rolling_context_window_size FROM D_CHAT_SETTINGS WHERE chat_id = ?
+    ''', (chat_id,))
+    rolling_time_window = cursor.fetchone()
+    if rolling_time_window:
+        rolling_time_window = rolling_time_window[0]
+    else:
+        rolling_time_window = 0
+
+    end_time = datetime.now()
+    start_time = end_time - timedelta(seconds=rolling_time_window)
+    cursor.execute('''
+    SELECT dp.username, fsc.message, fsc.message_timestamp
+    FROM R_CHAT_CONTEXT fsc
+    JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
+    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
+    WHERE ds.chat_id = ? AND fsc.idate BETWEEN ? AND ?
+    ''', (chat_id, start_time, end_time))
+    messages = cursor.fetchall()
+    formatted_messages = ', '.join([f"At {timestamp} {username} said: {message}" for username, message, timestamp in messages])
+    return formatted_messages
+
+def get_chat_messages_within_time_window(conn: sqlite3.Connection, chat_id: str) -> list:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT static_window_start_time, static_window_end_time FROM D_CHAT_SETTINGS WHERE chat_id = ?
+    ''', (chat_id,))
+    time_window = cursor.fetchone()
+    if time_window:
+        start_time, end_time = time_window
+    else:
+        current_timestamp = datetime.now()
+        start_time, end_time = current_timestamp, current_timestamp
+    cursor.execute('''
+    SELECT dp.username, fsc.message, fsc.message_timestamp
+    FROM R_CHAT_CONTEXT fsc
+    JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
+    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
+    WHERE ds.chat_id = ? AND fsc.message_timestamp BETWEEN ? AND ?
+    ''', (chat_id, start_time, end_time))
+    messages = cursor.fetchall()
+    formatted_messages = ', '.join([f"At {timestamp} {username} said: {message}" for username, message, timestamp in messages])
+    return formatted_messages
