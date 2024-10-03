@@ -31,6 +31,8 @@ def main() -> None:
     application.add_handler(CommandHandler("context_last_n", handlers.set_chat_to_n_messages_context))
     application.add_handler(CommandHandler("context_session", handlers.set_chat_to_session_context))
     application.add_handler(CommandHandler("context_none", handlers.set_chat_to_no_context))
+    #TODO: Add command to give info about the current context
+
 
     # List all players in db
     application.add_handler(CommandHandler("all_players", handlers.list_all_players))
