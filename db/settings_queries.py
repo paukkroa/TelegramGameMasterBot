@@ -90,7 +90,7 @@ def update_chat_static_context_end_time(conn: sqlite3.Connection, chat_id: str, 
     if end_time is not None:
         cursor.execute('''
         UPDATE D_CHAT_SETTINGS
-        SET static_window_end_time = ?
+        SET static_window_end_time = ?,
             uby = ?,
             udate = CURRENT_TIMESTAMP
         WHERE chat_id = ?
@@ -98,7 +98,7 @@ def update_chat_static_context_end_time(conn: sqlite3.Connection, chat_id: str, 
     else:
         cursor.execute('''
         UPDATE D_CHAT_SETTINGS
-        SET static_window_end_time = CURRENT_TIMESTAMP
+        SET static_window_end_time = CURRENT_TIMESTAMP,
             uby = ?,
             udate = CURRENT_TIMESTAMP
         WHERE chat_id = ?
