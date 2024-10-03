@@ -17,10 +17,20 @@ def main() -> None:
     # Add bot id to D_PLAYER if not exists
     db.insert_player(sql_connection, BOT_TG_ID, BOT_NAME)
 
-    # Register the user and chat
+    # Register the user and chat with default settings
     application.add_handler(CommandHandler("start", handlers.start))
     # Help command
     application.add_handler(CommandHandler("help", handlers.help_command))
+
+    # Change chat settings
+    application.add_handler(CommandHandler("context_all", handlers.set_chat_to_all_context))
+    application.add_handler(CommandHandler("context_static", handlers.set_chat_to_static_context))
+    application.add_handler(CommandHandler("static_context_start", handlers.set_chat_to_static_context))
+    application.add_handler(CommandHandler("static_context_end", handlers.end_static_window))
+    application.add_handler(CommandHandler("context_rolling", handlers.set_chat_to_rolling_context))
+    application.add_handler(CommandHandler("context_last_n", handlers.set_chat_to_n_messages_context))
+    application.add_handler(CommandHandler("context_session", handlers.set_chat_to_session_context))
+    application.add_handler(CommandHandler("context_none", handlers.set_chat_to_no_context))
 
     # List all players in db
     application.add_handler(CommandHandler("all_players", handlers.list_all_players))
