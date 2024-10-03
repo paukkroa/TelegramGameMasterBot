@@ -239,3 +239,32 @@ def get_chat_messages_within_time_window(conn: sqlite3.Connection, chat_id: str)
     messages = cursor.fetchall()
     formatted_messages = ', '.join([f"At {timestamp} {username} said: {message}" for username, message, timestamp in messages])
     return formatted_messages
+
+def get_last_n_messages(conn: sqlite3.Connection, chat_id: str) -> list:
+    cursor = conn.cursor()
+    
+    # Get the number of messages to retrieve from D_CHAT_SETTINGS
+    cursor.execute('''
+    SELECT n_messages FROM D_CHAT_SETTINGS WHERE chat_id = ?
+    ''', (chat_id,))
+    n_messages = cursor.fetchone()
+    if n_messages:
+        n_messages = n_messages[0]
+    else:
+        n_messages = 0  # Default value if not set
+
+    # Retrieve the last n messages from R_CHAT_CONTEXT
+    cursor.execute('''
+    SELECT dp.username, fsc.message, fsc.message_timestamp
+    FROM R_CHAT_CONTEXT fsc
+    JOIN D_PLAYER dp ON fsc.sender_id = dp.player_id
+    JOIN D_SESSION ds ON fsc.session_id = ds.session_id
+    WHERE ds.chat_id = ?
+    ORDER BY fsc.message_timestamp DESC
+    LIMIT ?
+    ''', (chat_id, n_messages))
+    messages = cursor.fetchall()
+    
+    # Format the messages
+    formatted_messages = ', '.join([f"At {timestamp} {username} said: {message}" for username, message, timestamp in messages])
+    return formatted_messages

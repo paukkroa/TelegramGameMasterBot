@@ -50,8 +50,9 @@ def create_tables(conn: sqlite3.Connection) -> None:
     conn.execute('''
     CREATE TABLE IF NOT EXISTS D_CHAT_SETTINGS (
         chat_id TEXT PRIMARY KEY,
-        context_window_type TEXT NOT NULL DEFAULT 'all', -- all, static, rolling, none
+        context_window_type TEXT NOT NULL DEFAULT 'all', -- all, static, rolling, n-messages, none
         rolling_context_window_size INTEGER, -- in seconds
+        n_messages INTEGER,
         static_window_start_time TIMESTAMP,
         static_window_end_time TIMESTAMP,
         iby TEXT DEFAULT 'system',
