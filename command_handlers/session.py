@@ -46,6 +46,7 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await tournament.start()
 
 
+# This doesn't delete the tournament from the ongoing_tournaments dict after the refactoring
 async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """End the current session"""
     chat_id = update.effective_chat.id
