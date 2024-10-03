@@ -19,8 +19,6 @@ async def generic_message_llm_handler(update: Update,
                                       bot_name: str = BOT_NAME, 
                                       bot_tg_id: int = BOT_TG_ID) -> None:
     msg = update.message.text
-    # Remove bot mention from the message
-    msg = msg.replace(f'@{bot_name}', '')
     sender_id = update.effective_user.id
     sender_name = await get_username_by_id(sender_id, context)
     chat_id = update.effective_chat.id
@@ -28,7 +26,9 @@ async def generic_message_llm_handler(update: Update,
     chat_settings = get_chat_settings(sql_connection, chat_id)
 
     # Bot is mentioned, reply to the text
-    if f'@{bot_name}' in update.message.text:
+    if f'@{bot_name}' in msg:
+        # Remove bot mention from the message
+        msg = msg.replace(f'@{bot_name}', '')
         # Retrieve all of the message history
         if chat_settings['context_window_type'] == 'all':
             context = get_all_chat_messages(sql_connection, chat_id)
@@ -77,7 +77,7 @@ async def generic_message_llm_handler(update: Update,
             llm_response = response['message']['content']
 
         elif chat_settings['context_window_type'] == 'n-messages':
-            context = get_last_n_messages(sql_connection, chat_id, chat_settings['n_messages'])
+            context = get_last_n_messages(sql_connection, chat_id)
             logger.info(f"Retrieved last n-messages (n: {chat_settings['n_messages']}) for chat {chat_id}: {context}")
             response = ollama.chat(model=LLM_MODEL, messages=[
                 {
