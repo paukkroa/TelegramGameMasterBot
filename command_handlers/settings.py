@@ -102,12 +102,15 @@ async def set_chat_to_n_messages_context(update: Update, context: ContextTypes.D
 
     msg_words = update.message.text.split(' ') + ['']
 
-    if len(msg_words) > 1:
+    if len(msg_words) > 2:
         try:
             n_messages = int(msg_words[1])
         except:
             await update.message.reply_text("Invalid number of messages. Please provide a valid integer.")
             return
+        
+    else:
+        n_messages = 10
 
     db.set_chat_to_n_messages_context(sql_connection, chat_id, player_id, n_messages)
     await update.message.reply_text(rf"Chat context set to last {n_messages} messages.")
