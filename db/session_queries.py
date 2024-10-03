@@ -1,6 +1,10 @@
 import sqlite3
 import hashlib
 from datetime import datetime, timedelta
+import sqlite3
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 def start_session(conn: sqlite3.Connection, chat_id: str) -> str:
     cursor = conn.cursor()
@@ -203,6 +207,7 @@ def get_chat_messages_from_rolling_time_window(conn: sqlite3.Connection, chat_id
     if rolling_time_window:
         rolling_time_window = rolling_time_window[0]
     else:
+        logger.info(f"WARNING - No rolling time window set for chat {chat_id}.")
         rolling_time_window = 0
 
     end_time = datetime.now()
@@ -229,6 +234,7 @@ def get_chat_messages_within_time_window(conn: sqlite3.Connection, chat_id: str)
         if end_time is None:
             end_time = datetime.now()
     else:
+        logger.info(f"WARNING - No static time window set for chat {chat_id}.")
         current_timestamp = datetime.now()
         start_time, end_time = current_timestamp, current_timestamp
     cursor.execute('''
@@ -244,7 +250,7 @@ def get_chat_messages_within_time_window(conn: sqlite3.Connection, chat_id: str)
 
 def get_last_n_messages(conn: sqlite3.Connection, chat_id: str, n_messages: int = None) -> list:
     cursor = conn.cursor()
-    
+
     # Get the number of messages to retrieve from D_CHAT_SETTINGS unless given
     if n_messages is None:
         cursor.execute('''
