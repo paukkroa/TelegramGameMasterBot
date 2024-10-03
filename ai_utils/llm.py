@@ -8,11 +8,16 @@ from db.settings_queries import get_chat_settings
 from ai_utils.llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT, SYS_PROMPT_WITH_CONTEXT_SESSION_ONLY
 from utils.helpers import get_username_by_id
 from utils.logger import get_logger
+from utils.config import BOT_NAME, BOT_TG_ID
 
 logger = get_logger(__name__)
 
 # TODO: Add rolling context window
-async def generic_message_llm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, sql_connection: sqlite3.Connection, bot_name: str, bot_tg_id: int) -> None:
+async def generic_message_llm_handler(update: Update, 
+                                      context: ContextTypes.DEFAULT_TYPE, 
+                                      sql_connection: sqlite3.Connection, 
+                                      bot_name: str = BOT_NAME, 
+                                      bot_tg_id: int = BOT_TG_ID) -> None:
     msg = update.message.text
     # Remove bot mention from the message
     msg = msg.replace(f'@{bot_name}', '')
