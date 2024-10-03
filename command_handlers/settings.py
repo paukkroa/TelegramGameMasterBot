@@ -53,7 +53,7 @@ async def start_static_window(update: Update, context: ContextTypes.DEFAULT_TYPE
         else:
             logger.info(f"Start time: {start_time}")
     else:
-        start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        start_time = None
         
     db.set_chat_to_static_context(sql_connection, chat_id, player_id, start_time)
     await update.message.reply_text("Chat context set to static window.")
