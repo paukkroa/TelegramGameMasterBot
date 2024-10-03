@@ -66,7 +66,8 @@ async def end_static_window(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     chat_id = update.effective_chat.id
     player_id = update.effective_user.id
     db.update_chat_static_context_end_time(sql_connection, chat_id, player_id)
-    await update.message.reply_text(rf"Static window ended at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.")
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    await update.message.reply_text(rf"Static window ended at {current_time}.")
 
 async def set_chat_to_rolling_context(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
