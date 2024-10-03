@@ -226,6 +226,8 @@ def get_chat_messages_within_time_window(conn: sqlite3.Connection, chat_id: str)
     time_window = cursor.fetchone()
     if time_window:
         start_time, end_time = time_window
+        if end_time is None:
+            end_time = datetime.now()
     else:
         current_timestamp = datetime.now()
         start_time, end_time = current_timestamp, current_timestamp
