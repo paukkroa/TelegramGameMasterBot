@@ -12,7 +12,7 @@ from utils.config import BOT_NAME, BOT_TG_ID
 
 logger = get_logger(__name__)
 
-# TODO: Add rolling context window
+# TODO: Add a check to see if Ollama is available
 async def generic_message_llm_handler(update: Update, 
                                       context: ContextTypes.DEFAULT_TYPE, 
                                       sql_connection: sqlite3.Connection, 
