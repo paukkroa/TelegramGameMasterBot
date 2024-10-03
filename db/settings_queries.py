@@ -40,27 +40,49 @@ def set_chat_to_all_context(conn: sqlite3.Connection, chat_id: str, player_id: i
     ''', (player_id, chat_id,))
     conn.commit()
 
-def set_chat_to_static_context(conn: sqlite3.Connection, chat_id: str, player_id: int, start_time: str, end_time: str = None) -> None:
+def set_chat_to_static_context(conn: sqlite3.Connection, chat_id: str, player_id: int, start_time: str = None, end_time: str = None) -> None:
     cursor = conn.cursor()
-    if end_time is not None:
-        cursor.execute('''
-        UPDATE D_CHAT_SETTINGS
-        SET context_window_type = 'static',
-            static_window_start_time = ?,
-            static_window_end_time = ?
-            uby = ?,
-            udate = CURRENT_TIMESTAMP
-        WHERE chat_id = ?
-        ''', (start_time, end_time, player_id, chat_id))
+    if start_time is not None:
+        if end_time is not None:
+            cursor.execute('''
+            UPDATE D_CHAT_SETTINGS
+            SET context_window_type = 'static',
+                static_window_start_time = ?,
+                static_window_end_time = ?
+                uby = ?,
+                udate = CURRENT_TIMESTAMP
+            WHERE chat_id = ?
+            ''', (start_time, end_time, player_id, chat_id))
+        else:
+            cursor.execute('''
+            UPDATE D_CHAT_SETTINGS
+            SET context_window_type = 'static',
+                static_window_start_time = ?,
+                uby = ?,
+                udate = CURRENT_TIMESTAMP
+            WHERE chat_id = ?
+            ''', (start_time, player_id, chat_id))
     else:
-        cursor.execute('''
-        UPDATE D_CHAT_SETTINGS
-        SET context_window_type = 'static',
-            static_window_start_time = ?,
-            uby = ?,
-            udate = CURRENT_TIMESTAMP
-        WHERE chat_id = ?
-        ''', (start_time, player_id, chat_id))
+        if end_time is not None:
+            cursor.execute('''
+            UPDATE D_CHAT_SETTINGS
+            SET context_window_type = 'static',
+                static_window_start_time = CURRENT_TIMESTAMP,
+                static_window_end_time = ?,
+                uby = ?,
+                udate = CURRENT_TIMESTAMP
+            WHERE chat_id = ?
+            ''', (end_time, player_id, chat_id))
+        else:
+            cursor.execute('''
+            UPDATE D_CHAT_SETTINGS
+            SET context_window_type = 'static',
+                static_window_start_time = CURRENT_TIMESTAMP,
+                uby = ?,
+                udate = CURRENT_TIMESTAMP
+            WHERE chat_id = ?
+            ''', (player_id, chat_id,))
+
     conn.commit()
 
 def update_chat_static_context_end_time(conn: sqlite3.Connection, chat_id: str, player_id: int, end_time: str = None) -> None:
