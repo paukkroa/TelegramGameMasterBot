@@ -34,6 +34,8 @@ class Game:
         self.sql_connection = sql_connection
         self.session_id = session_id
         self.bot_tg_id_str = BOT_TG_ID
+
+        # FOR TEAM GAMES:
         """ 
         dict of dicts - entry format: 
         {

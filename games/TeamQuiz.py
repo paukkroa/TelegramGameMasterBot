@@ -3,6 +3,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 from typing import Callable
 
+import db
 from games.Game import Game
 from utils.logger import get_logger
 from resources.questions import questions
@@ -101,9 +102,12 @@ class TeamQuiz(Game):
         self.is_round_ongoing = True
         self.current_question = self.questions_for_game[self.current_round - 1]
 
+        options = self.current_question['options']
+        random.shuffle(options)
+
         keyboard = [
             [InlineKeyboardButton(option, callback_data=f"quiz:{option}")]
-            for option in self.current_question['options']
+            for option in options
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -124,7 +128,6 @@ class TeamQuiz(Game):
         logger.info(f"Answer by {answering_player.username}")
 
         if not self.is_round_ongoing:
-            await self.send_player_chat(answering_player.id, "Round has already ended.")
             return
 
         if self.teams[answering_team]['has_answered']:
@@ -135,8 +138,6 @@ class TeamQuiz(Game):
         await query.answer()
         selected_option = query.data.split(':')[1]
 
-        logger.info(f"Selected {selected_option}")
-
         self.teams[answering_team]['has_answered'] = True
         correct_answers = self.current_question['correct']
 
@@ -146,6 +147,9 @@ class TeamQuiz(Game):
             await self.send_group_chat(f"Round winner is team {answering_team}! {answering_player.username} "
                                        f"got the correct answer.")
             await self.end_round()
+        else:
+            await self.send_group_chat(f"{answering_player.username} from team {answering_team} "
+                                       f"guessed wrong.")
 
         if all(team['has_answered'] for team in self.teams.values()):
             await self.send_group_chat("Round ended. Everyone guessed wrong.")
@@ -167,6 +171,25 @@ class TeamQuiz(Game):
     async def end(self):
         await self.send_group_chat("Team quiz ended.")
         self.remove_handlers()
+
+        # Sort by points desc
+        sorted_teams = sorted(self.team_points.items(), key=lambda item: item[1], reverse=True)
+
+        # ADD POINTS
+
+        first_team_id = sorted_teams[0][0]
+        for member in self.teams[first_team_id]['members']:
+            db.add_points_to_player(self.sql_connection, self.session_id, member['id'], 5)
+
+        if len(sorted_teams) >= 2:
+            second_team_id = sorted_teams[1][0]
+            for member in self.teams[second_team_id]['members']:
+                db.add_points_to_player(self.sql_connection, self.session_id, member['id'], 3)
+
+        if len(sorted_teams) >= 3:
+            third_team_id = sorted_teams[2][0]
+            for member in self.teams[third_team_id]['members']:
+                db.add_points_to_player(self.sql_connection, self.session_id, member['id'], 1)
 
         self.num_of_teams = 0
         self.current_round = 1
