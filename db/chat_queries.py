@@ -17,6 +17,10 @@ def create_chat(conn: sqlite3.Connection, chat_id: str, chat_name: str = '') -> 
     cursor.execute('''
     INSERT INTO D_CHAT (chat_id, chat_name) VALUES (?, ?)
     ''', (chat_id, chat_name))
+    # Insert the chat into D_CHAT_SETTINGS with default settings
+    cursor.execute('''
+    INSERT INTO D_CHAT_SETTINGS (chat_id) VALUES (?)
+    ''', (chat_id,))
     conn.commit()
 
 # TODO: Use hashing for chat_id for improved security

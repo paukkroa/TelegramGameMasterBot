@@ -47,6 +47,21 @@ def create_tables(conn: sqlite3.Connection) -> None:
     );
     ''')
 
+    conn.execute('''
+    CREATE TABLE IF NOT EXISTS D_CHAT_SETTINGS (
+        chat_id TEXT PRIMARY KEY,
+        context_window_type TEXT NOT NULL DEFAULT 'n-messages', -- all, static, rolling, n-messages, session, none
+        rolling_context_window_size INTEGER, -- in seconds
+        n_messages INTEGER DEFAULT 10, -- Uses 10 last messages by default
+        static_window_start_time TIMESTAMP,
+        static_window_end_time TIMESTAMP,
+        iby TEXT DEFAULT 'system',
+        uby TEXT DEFAULT 'system',
+        idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    ''')
+
     # Chat members R_CHAT_MEMBERS
     conn.execute('''
     CREATE TABLE IF NOT EXISTS R_CHAT_MEMBERS (
@@ -131,10 +146,11 @@ def create_tables(conn: sqlite3.Connection) -> None:
     );
     ''')
 
-    # Session context F_SESSION_CONTEXT
+    # Chat context R_CHAT_CONTEXT
     conn.execute('''
-    CREATE TABLE IF NOT EXISTS R_SESSION_CONTEXT (
-        session_id TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS R_CHAT_CONTEXT (
+        chat_id TEXT NOT NULL,
+        session_id TEXT,
         sender_id INTEGER NOT NULL,
         message TEXT NOT NULL,
         message_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -142,6 +158,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
         uby TEXT DEFAULT 'system',
         idate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         udate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (chat_id) REFERENCES D_CHAT(chat_id),
         FOREIGN KEY (session_id) REFERENCES D_SESSION(session_id),
         FOREIGN KEY (sender_id) REFERENCES D_PLAYER(player_id)
     );
