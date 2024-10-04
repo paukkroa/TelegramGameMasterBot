@@ -4,8 +4,10 @@ from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 from typing import Callable
 
 from games.Game import Game
-from utils.helpers import get_username_by_id
+from utils.logger import get_logger
 from resources.questions import questions
+
+logger = get_logger(__name__)
 
 class TeamQuiz(Game):
     """
@@ -20,8 +22,6 @@ class TeamQuiz(Game):
     - Let every team answer and correct guesses get points
     - (CURRENT) Only fastest correct answer gets points
     """
-
-
     def __init__(self,
                  id: int,
                  player_ids: list,
@@ -43,7 +43,6 @@ class TeamQuiz(Game):
         self.rounds = 8
         self.current_round = 1
         self.questions_for_game = []
-        self.team_answers = {}
         self.team_points = {}
         self.current_question = None
         self.is_round_ongoing = False
@@ -51,7 +50,7 @@ class TeamQuiz(Game):
     async def start(self):
         await self.send_group_chat(f"Let's play team quiz!")
         await self.draw_teams()
-        await self.send_group_chat("Send /next when you want to get the next question.")
+        await self.send_group_chat("Send /next when you want to start.")
 
         for team_id in self.teams.keys():
             self.team_points[team_id] = 0
@@ -59,7 +58,7 @@ class TeamQuiz(Game):
         self.draw_questions()
 
         self.handlers.append(CommandHandler("next", self.next_question))
-        self.handlers.append(CallbackQueryHandler(self.handle_answer))
+        self.handlers.append(CallbackQueryHandler(self.handle_answer, pattern=r'^quiz:'))
         self.add_handlers()
 
     def set_num_of_teams(self, num):
@@ -71,7 +70,10 @@ class TeamQuiz(Game):
     async def draw_teams(self):
         num_of_players = len(self.player_ids)
 
-        if self.num_of_teams == 0:
+        if num_of_players == 2:
+            self.num_of_teams = 2
+
+        elif self.num_of_teams == 0:
             self.num_of_teams = num_of_players // 2
 
         if num_of_players < 2:
@@ -95,30 +97,31 @@ class TeamQuiz(Game):
     def draw_questions(self):
         self.questions_for_game = random.sample(questions, self.rounds)
 
-    async def next_question(self):
-        if self.current_round > self.rounds:
-            await self.end()
-            return
-
-        # Init answers
-        for team_id in self.teams.keys():
-            self.team_answers[team_id] = None
-
+    async def next_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         self.is_round_ongoing = True
         self.current_question = self.questions_for_game[self.current_round - 1]
 
         keyboard = [
-            [InlineKeyboardButton(option, callback_data=option)]
+            [InlineKeyboardButton(option, callback_data=f"quiz:{option}")]
             for option in self.current_question['options']
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
+        await self.context.bot.send_message(chat_id=self.chat_id, text=self.current_question['question'],
+                                            reply_markup=reply_markup)
+
+        # TODO: decide if question is sent in the group or dm
+        """        
         for player_id in self.player_ids:
-            await self.context.bot.send_message(player_id, self.current_question['question'], reply_markup)
+            await self.context.bot.send_message(chat_id=player_id, text=self.current_question['question'],
+                                                reply_markup=reply_markup)
+        """
 
     async def handle_answer(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         answering_player = update.effective_user
         answering_team = self.player_teams[answering_player.id]
+
+        logger.info(f"Answer by {answering_player.username}")
 
         if not self.is_round_ongoing:
             await self.send_player_chat(answering_player.id, "Round has already ended.")
@@ -130,21 +133,36 @@ class TeamQuiz(Game):
 
         query = update.callback_query
         await query.answer()
-        selected_option = query.data
+        selected_option = query.data.split(':')[1]
+
+        logger.info(f"Selected {selected_option}")
 
         self.teams[answering_team]['has_answered'] = True
-        self.team_answers[answering_team] = selected_option
-
         correct_answers = self.current_question['correct']
 
         # Team is winner
         if selected_option in correct_answers:
-            self.is_round_ongoing = False
             self.team_points[answering_team] += 1
+            await self.send_group_chat(f"Round winner is team {answering_team}! {answering_player.username} "
+                                       f"got the correct answer.")
+            await self.end_round()
 
-        if all(answer is not None for answer in self.team_answers.values()):
-            self.is_round_ongoing = False
+        if all(team['has_answered'] for team in self.teams.values()):
             await self.send_group_chat("Round ended. Everyone guessed wrong.")
+            await self.end_round()
+
+    async def end_round(self):
+        self.is_round_ongoing = False
+        # Init answers
+        self.current_round += 1
+        for team_id in self.teams.keys():
+            self.teams[team_id]['has_answered'] = False
+
+        if self.current_round > self.rounds:
+            await self.end()
+            return
+
+        await self.send_group_chat(f"Send /next when ready for the next round.")
 
     async def end(self):
         await self.send_group_chat("Team quiz ended.")
@@ -152,7 +170,6 @@ class TeamQuiz(Game):
 
         self.num_of_teams = 0
         self.current_round = 1
-        self.team_answers = {}
         self.team_points = {}
         self.current_question = None
         self.is_round_ongoing = False

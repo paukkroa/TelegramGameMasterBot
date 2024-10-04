@@ -1,23 +1,45 @@
-from telegram import User
+from telegram import User, Update
 from telegram.ext import ContextTypes
 
 import db
 from utils.config import sql_connection
+from utils.logger import get_logger
 
-async def handle_stats_callback(key: str, context: ContextTypes.DEFAULT_TYPE, session_id: str,
-                                chat_id: int, chat_name: str, user: User):
-    if key == 'stats:player_session':
-        await send_player_session_stats(context, session_id, chat_id, user)
+logger = get_logger(__name__)
 
-    elif key == 'stats:player_alltime':
-        await send_player_all_time_stats(context, chat_id, user)
+async def handle_stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    chat = update.effective_chat
 
-    elif key == 'stats:group_session':
-        await send_group_session_stats(context, session_id, chat_id, chat_name)
+    if chat.type in ['group', 'supergroup']:
+        chat_name = chat.title
+    else:
+        chat_name = user.username
 
-    elif key == 'stats:group_alltime':
-        await send_group_all_time_stats(context, chat_id, chat_name)
+    query = update.callback_query
+    await query.answer()
 
+    # None if player has no recent sessions
+    session_id = str(db.get_most_recent_session_by_player(sql_connection, user.id))
+    logger.info(f"Player {user.username} latest session id: {session_id}")
+
+    # Interrupt if session id is None and it is needed
+    if not session_id and 'session' in query.data.lower():
+        msg = f"Fetching session stats failed: {user.username} does not have a recent session."
+        await context.bot.send_message(chat_id=chat.id, text=msg)
+        return
+
+    if query.data == 'stats:player_session':
+        await send_player_session_stats(context, session_id, chat.id, user)
+
+    elif query.data == 'stats:player_alltime':
+        await send_player_all_time_stats(context, chat.id, user)
+
+    elif query.data == 'stats:group_session':
+        await send_group_session_stats(context, session_id, chat.id, chat_name)
+
+    elif query.data == 'stats:group_alltime':
+        await send_group_all_time_stats(context, chat.id, chat_name)
 
 async def send_player_session_stats(context: ContextTypes.DEFAULT_TYPE, session_id: str, chat_id: int, user: User):
     stats = db.get_player_session_stats(sql_connection, session_id, user.id)

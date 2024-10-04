@@ -3,7 +3,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 import db
 from utils.config import sql_connection, BOT_TOKEN, BOT_NAME, BOT_TG_ID
-from callback_handler.handler import callback_query_handler
+from callback_handlers import handle_ranking_callback, handle_stats_callback
 import command_handlers as handlers
 
 def main() -> None:
@@ -45,14 +45,16 @@ def main() -> None:
     # Games for testing
     application.add_handler(CommandHandler("numbergame", handlers.handle_number_game_start))
     application.add_handler(CommandHandler("challenges", handlers.handle_challenge_game_start))
+    application.add_handler(CommandHandler("teamquiz", handlers.handle_team_quiz_start))
 
     # Handle generic group messages and respond with LLM
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND & ~filters.ChatType.PRIVATE, handlers.handle_generic_message)
     )
 
-    # General keyboard option handler
-    application.add_handler(CallbackQueryHandler(callback_query_handler))
+    # Option handlers
+    application.add_handler(CallbackQueryHandler(handle_ranking_callback, pattern=r'^ranking:'))
+    application.add_handler(CallbackQueryHandler(handle_stats_callback, pattern=r'^stats:'))
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
