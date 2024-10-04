@@ -4,10 +4,13 @@ from typing import Type
 import random
 import sqlite3
 
-from games import ChallengeGame, GuessNumber, Waterfall
+from games import ChallengeGame, GuessNumber, TeamQuiz, Waterfall
 from games.Game import Game
 from session.EventPoller import EventPoller
 import db
+
+# Add games whenever they are implemented
+GAMES = [ChallengeGame, GuessNumber, TeamQuiz, Waterfall]
 
 class Tournament:
     def __init__(self, session_id: str, player_ids: list, number_of_games: int, update: Update,
@@ -54,8 +57,7 @@ class Tournament:
             await self.end()
 
     async def draw_games(self) -> None:
-        # Add games whenever they get implemented
-        game_classes = [GuessNumber, ChallengeGame, Waterfall]
+        game_classes = GAMES
 
         if self.number_of_games <= 0:
             await self.send_group_chat("Error: number of games must be greater than 0.")
@@ -78,10 +80,8 @@ class Tournament:
                                                        counter, 
                                                        self.player_ids, 
                                                        self.update, 
-                                                       self.context, 
-                                                       self.sql_connection, 
-                                                       self.session_id, 
-                                                       self.bot_tg_id)
+                                                       self.context,
+                                                       self.session_id)
             self.games.append(game_instance)
             counter += 1
 
@@ -95,19 +95,15 @@ class Tournament:
                               id: int, 
                               player_ids: list, 
                               update: Update,
-                              context: ContextTypes.DEFAULT_TYPE, 
-                              sql_connection: sqlite3.Connection = db.connect(), 
-                              session_id: str = None, 
-                              bot_tg_id: str = None) -> Game:
+                              context: ContextTypes.DEFAULT_TYPE,
+                              session_id: str = None) -> Game:
         return game_class(id=id, 
                           player_ids=player_ids, 
                           is_part_of_tournament=True,
                           start_next_game=self.start_next_game, 
                           update=update, 
-                          context=context, 
-                          sql_connection=sql_connection, 
-                          session_id=session_id, 
-                          bot_tg_id=bot_tg_id)
+                          context=context,
+                          session_id=session_id)
 
     async def end(self):
         self.is_active = False

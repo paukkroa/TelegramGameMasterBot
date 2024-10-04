@@ -81,19 +81,7 @@ class TeamQuiz(Game):
             self.num_of_teams = 1
 
         await self.divide_players_into_teams(self.num_of_teams)
-
-        msg = f"The teams are as follows:\n"
-
-        for team_id, team in self.teams.items():
-            msg += f"\nTeam {team_id}: "
-
-            for j, member in enumerate(team['members']):
-                if j > 0:
-                    msg += ", "
-
-                msg += member['username']
-
-        await self.send_group_chat(msg)
+        await self.print_teams()
 
     def draw_questions(self):
         self.questions_for_game = random.sample(questions, self.rounds)
@@ -141,24 +129,27 @@ class TeamQuiz(Game):
         self.teams[answering_team]['has_answered'] = True
         correct_answers = self.current_question['correct']
 
-        # Team is winner
+        # Team has answered right -> they win the round instantly
         if selected_option in correct_answers:
             self.team_points[answering_team] += 1
             await self.send_group_chat(f"Round winner is team {answering_team}! {answering_player.username} "
                                        f"got the correct answer.")
             await self.end_round()
+
+        # Wrong guess
         else:
             await self.send_group_chat(f"{answering_player.username} from team {answering_team} "
                                        f"guessed wrong.")
 
+        # Everyone has answered and no right answers
         if all(team['has_answered'] for team in self.teams.values()):
             await self.send_group_chat("Round ended. Everyone guessed wrong.")
             await self.end_round()
 
     async def end_round(self):
         self.is_round_ongoing = False
-        # Init answers
         self.current_round += 1
+
         for team_id in self.teams.keys():
             self.teams[team_id]['has_answered'] = False
 

@@ -115,4 +115,17 @@ class Game:
 
         return self.teams
 
+    async def print_teams(self):
+        msg = f"The teams are:\n"
+
+        for team_id, team in self.teams.items():
+            msg += f"\nTeam {team_id}: "
+
+            for j, member in enumerate(team['members']):
+                if j > 0:
+                    msg += ", "
+
+                msg += member['username']
+
+        await self.send_group_chat(msg)
 
