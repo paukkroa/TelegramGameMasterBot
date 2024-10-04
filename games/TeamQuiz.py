@@ -1,4 +1,6 @@
 import random
+
+import setuptools
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 from typing import Callable
@@ -6,6 +8,7 @@ from typing import Callable
 import db
 from games.Game import Game
 from utils.logger import get_logger
+from utils.helpers import get_username_by_id
 from resources.questions import questions
 
 logger = get_logger(__name__)
@@ -47,18 +50,19 @@ class TeamQuiz(Game):
         self.team_points = {}
         self.current_question = None
         self.is_round_ongoing = False
+        self.player_points = {player_id: 0 for player_id in self.player_ids}
 
     async def start(self):
         await self.send_group_chat(f"Let's play team quiz!")
         await self.draw_teams()
-        await self.send_group_chat("Send /next when you want to start.")
+        await self.send_group_chat("Send /begin when you want to start.")
 
         for team_id in self.teams.keys():
             self.team_points[team_id] = 0
 
         self.draw_questions()
 
-        self.handlers.append(CommandHandler("next", self.next_question))
+        self.handlers.append(CommandHandler("begin", self.next_question))
         self.handlers.append(CallbackQueryHandler(self.handle_answer, pattern=r'^quiz:'))
         self.add_handlers()
 
@@ -132,6 +136,7 @@ class TeamQuiz(Game):
         # Team has answered right -> they win the round instantly
         if selected_option in correct_answers:
             self.team_points[answering_team] += 1
+            self.player_points[answering_player.id] += 1
             await self.send_group_chat(f"Round winner is team {answering_team}! {answering_player.username} "
                                        f"got the correct answer.")
             await self.end_round()
@@ -157,7 +162,7 @@ class TeamQuiz(Game):
             await self.end()
             return
 
-        await self.send_group_chat(f"Send /next when ready for the next round.")
+        await self.next_question(self.update, self.context)
 
     async def end(self):
         await self.send_group_chat("Team quiz ended.")
@@ -165,8 +170,12 @@ class TeamQuiz(Game):
 
         # Sort by points desc
         sorted_teams = sorted(self.team_points.items(), key=lambda item: item[1], reverse=True)
+        sorted_players = sorted(self.player_points.items(), key=lambda item: item[1], reverse=True)
+        best_player_id = sorted_players[0][0]
+        best_player_points = sorted_players[0][1]
+        best_player_username = await get_username_by_id(best_player_id, self.context)
 
-        # ADD POINTS
+        # AWARD POINTS
 
         first_team_id = sorted_teams[0][0]
         for member in self.teams[first_team_id]['members']:
@@ -181,6 +190,35 @@ class TeamQuiz(Game):
             third_team_id = sorted_teams[2][0]
             for member in self.teams[third_team_id]['members']:
                 db.add_points_to_player(self.sql_connection, self.session_id, member['id'], 1)
+
+        # SHOW FINAL RANKING AND DRINKS
+
+        ranking_msg = "Final ranking of the quiz:\n"
+        drink_msg = "Drinks awarded:\n"
+
+        winner_points = self.team_points[first_team_id]
+
+        for i, team_tuple in enumerate(sorted_teams):
+            [team_id, points] = team_tuple
+            team = self.teams[team_id]
+            ranking_msg += f"\n{i + 1}. Team {team_id} ("
+            drink_msg += f"\nTeam {team_id} ("
+
+            for j, member in enumerate(team['members']):
+                if j > 0:
+                    ranking_msg += ", "
+                    drink_msg += ", "
+
+                ranking_msg += member['username']
+                drink_msg += member['username']
+
+            ranking_msg += f"): {points}"
+            drink_msg += f"): {(self.rounds - points) * 2}"
+
+        ranking_msg += f"\n\nTop player was {best_player_username} with {best_player_points} points."
+
+        await self.send_group_chat(ranking_msg)
+        await self.send_group_chat(drink_msg)
 
         self.num_of_teams = 0
         self.current_round = 1
