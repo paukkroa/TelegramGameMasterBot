@@ -4,6 +4,21 @@ from telegram.ext import ContextTypes
 import db
 from utils.config import sql_connection
 
+async def handle_stats_callback(key: str, context: ContextTypes.DEFAULT_TYPE, session_id: str,
+                                chat_id: int, chat_name: str, user: User):
+    if key == 'stats:player_session':
+        await send_player_session_stats(context, session_id, chat_id, user)
+
+    elif key == 'stats:player_alltime':
+        await send_player_all_time_stats(context, chat_id, user)
+
+    elif key == 'stats:group_session':
+        await send_group_session_stats(context, session_id, chat_id, chat_name)
+
+    elif key == 'stats:group_alltime':
+        await send_group_all_time_stats(context, chat_id, chat_name)
+
+
 async def send_player_session_stats(context: ContextTypes.DEFAULT_TYPE, session_id: str, chat_id: int, user: User):
     stats = db.get_player_session_stats(sql_connection, session_id, user.id)
     msg = (f"Tournament stats for {user.username}:\n\n"

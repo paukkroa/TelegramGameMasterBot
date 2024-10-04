@@ -2,8 +2,8 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 import db
-import callback_handler.rankings as rh
-import callback_handler.stats as sh
+from rankings import handle_ranking_callback
+from stats import handle_stats_callback
 from utils.logger import get_logger
 from utils.config import sql_connection
 
@@ -33,33 +33,7 @@ async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_T
 
     # HANDLERS BELOW
 
-    if query.data == 'stats:player_session':
-        await sh.send_player_session_stats(context, session_id, chat.id, user)
-
-    elif query.data == 'stats:player_alltime':
-        await sh.send_player_all_time_stats(context, chat.id, user)
-
-    elif query.data == 'stats:group_session':
-        await sh.send_group_session_stats(context, session_id, chat.id, chat_name)
-
-    elif query.data == 'stats:group_alltime':
-        await sh.send_group_all_time_stats(context, chat.id, chat_name)
-
-    elif query.data == 'ranking:session_points':
-        await rh.send_session_ranking(context, chat.id, 'points', session_id)
-
-    elif query.data == 'ranking:session_drinks':
-        await rh.send_session_ranking(context, chat.id, 'drinks', session_id)
-
-    elif query.data == 'ranking:alltime_points':
-        await rh.send_all_time_ranking(context, chat.id, 'points')
-
-    elif query.data == 'ranking:alltime_drinks':
-        await rh.send_all_time_ranking(context, chat.id, 'drinks')
-
-    elif query.data == 'ranking:alltime_games':
-        await rh.send_all_time_ranking(context, chat.id, 'games')
-
-    elif query.data == 'ranking:alltime_tournaments':
-        await rh.send_all_time_ranking(context, chat.id, 'tournaments')
-
+    if query.data.startswith('stats'):
+        await handle_stats_callback(query.data, context, session_id, chat.id, chat_name, user)
+    elif query.data.startswith('ranking'):
+        await handle_ranking_callback(query.data, context, chat.id, session_id)

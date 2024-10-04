@@ -3,6 +3,25 @@ from telegram.ext import ContextTypes
 import db
 from utils.config import sql_connection
 
+async def handle_ranking_callback(key: str, context: ContextTypes.DEFAULT_TYPE, chat_id: int, session_id: str):
+    if key == 'ranking:session_points':
+        await send_session_ranking(context, chat_id, 'points', session_id)
+
+    elif key == 'ranking:session_drinks':
+        await send_session_ranking(context, chat_id, 'drinks', session_id)
+
+    elif key == 'ranking:alltime_points':
+        await send_all_time_ranking(context, chat_id, 'points')
+
+    elif key == 'ranking:alltime_drinks':
+        await send_all_time_ranking(context, chat_id, 'drinks')
+
+    elif key == 'ranking:alltime_games':
+        await send_all_time_ranking(context, chat_id, 'games')
+
+    elif key == 'ranking:alltime_tournaments':
+        await send_all_time_ranking(context, chat_id, 'tournaments')
+
 async def send_all_time_ranking(context: ContextTypes.DEFAULT_TYPE, chat_id: int, key: str) -> None:
     ranking = db.get_group_alltime_ranking(sql_connection, chat_id, key)
 
