@@ -19,8 +19,9 @@ def main() -> None:
 
     # Register the user and chat with default settings
     application.add_handler(CommandHandler("start", handlers.start))
-    # Help command
+    # Help commands
     application.add_handler(CommandHandler("help", handlers.help_command))
+    application.add_handler(CommandHandler("help_ai", handlers.ai_help_command))
 
     # Change chat settings
     application.add_handler(CommandHandler("context_all", handlers.set_chat_to_all_context))
