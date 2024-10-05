@@ -31,7 +31,7 @@ class Tournament:
                                   self.sql_connection, self.session_id)
 
     async def send_group_chat(self, message: str):
-        db.add_message_to_session_context(self.sql_connection, self.session_id, self.bot_tg_id, message)
+        db.add_message_to_chat_context(self.sql_connection, self.chat_id, self.bot_tg_id, message, self.session_id)
         await self.context.bot.send_message(chat_id=self.chat_id, text=message)
 
     async def start(self) -> None:
