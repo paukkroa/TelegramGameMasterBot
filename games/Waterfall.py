@@ -2,7 +2,6 @@ from telegram import Update
 from telegram.ext import CommandHandler, ContextTypes
 from typing import Callable
 import random
-import sqlite3
 
 import db
 from utils.helpers import get_username_by_id
@@ -17,9 +16,7 @@ class Waterfall(Game):
                  context: ContextTypes.DEFAULT_TYPE,
                  is_part_of_tournament: bool = False, 
                  start_next_game: Callable[[], None] = None,
-                 sql_connection: sqlite3.Connection = db.connect(), 
-                 session_id: str = None, 
-                 bot_tg_id: str = None):
+                 session_id: str = None):
         super().__init__(name="Waterfall", 
                          id=id, 
                          player_ids=player_ids, 
@@ -27,9 +24,7 @@ class Waterfall(Game):
                          context=context,
                          is_part_of_tournament=is_part_of_tournament, 
                          start_next_game=start_next_game,
-                         sql_connection=sql_connection, 
-                         session_id=session_id, 
-                         bot_tg_id=bot_tg_id)
+                         session_id=session_id)
 
     async def start(self):
         random_player_id = random.sample(self.player_ids, 1)[0]

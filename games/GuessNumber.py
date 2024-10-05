@@ -2,7 +2,6 @@ from telegram import Update
 from telegram.ext import ContextTypes, MessageHandler, filters
 from typing import Callable
 import random
-import sqlite3
 
 import db
 from utils.helpers import get_username_by_id, convert_swigs_to_units
@@ -16,9 +15,7 @@ class GuessNumber(Game):
                  context: ContextTypes.DEFAULT_TYPE,
                  is_part_of_tournament: bool = False, 
                  start_next_game: Callable[[], None] = None,
-                 sql_connection: sqlite3.Connection = db.connect(),
-                 session_id: str = None, 
-                 bot_tg_id: str = None):
+                 session_id: str = None):
         super().__init__(name="Guess number", 
                          id=id, 
                          player_ids=player_ids, 
@@ -26,9 +23,7 @@ class GuessNumber(Game):
                          context=context,
                          is_part_of_tournament=is_part_of_tournament, 
                          start_next_game=start_next_game,
-                         sql_connection=sql_connection, 
-                         session_id=session_id, 
-                         bot_tg_id=bot_tg_id)
+                         session_id=session_id)
         self.target_number = 0
         self.guesses = {player_id: None for player_id in player_ids} # Track guess of each user - {id, value}
         self.drinks = {player_id: None for player_id in player_ids}
