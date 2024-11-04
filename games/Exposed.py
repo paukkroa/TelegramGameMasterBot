@@ -44,6 +44,7 @@ class Exposed(Game):
         self.vote_results = {}
         self.winners = []
         self.current_question = None
+        self.current_options = []
         self.is_round_ongoing = False
         self.player_points = {player_id: 0 for player_id in self.player_ids}
         self.player_usernames = {}
@@ -79,6 +80,7 @@ class Exposed(Game):
         available_options = list(self.player_usernames.values())
         logger.info(f"Available options: {available_options}")
         options = random.sample(available_options, 2)
+        self.current_options = options
         logger.info(f"Selected options: {options}")
 
         keyboard = [
@@ -119,6 +121,10 @@ class Exposed(Game):
         query = update.callback_query
         await query.answer()
         selected_option = query.data.split(':')[1]
+
+        # Workaround for disabling old options
+        if selected_option not in self.current_options:
+            return
 
         self.round_votes.append(selected_option)
         self.vote_results[self.current_round] = self.round_votes
@@ -193,6 +199,7 @@ class Exposed(Game):
         self.num_of_teams = 0
         self.current_round = 1
         self.current_question = None
+        self.current_options = []
         self.is_round_ongoing = False
         self.questions_for_game = []
 
