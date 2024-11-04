@@ -33,7 +33,7 @@ class Game:
         self.chat_id = self.update.effective_chat.id
         self.sql_connection = sql_connection
         self.session_id = session_id
-        self.bot_tg_id_str = BOT_TG_ID
+        self.bot_tg_id = BOT_TG_ID
 
         # FOR TEAM GAMES:
         """ 
@@ -67,7 +67,7 @@ class Game:
         await self.context.bot.send_message(chat_id=self.chat_id, text=message)
 
     async def send_player_chat(self, user_id: int, message: str):
-        db.add_message_to_chat_context(self.sql_connection, self.session_id, self.bot_tg_id, message, self.session_id)
+        db.add_message_to_chat_context(self.sql_connection, self.chat_id, self.bot_tg_id, message, self.session_id)
         await self.context.bot.send_message(chat_id=user_id, text=message)
 
     def add_handlers(self):
