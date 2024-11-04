@@ -2,7 +2,7 @@ import os
 import db.schema as db
 
 BOT_TOKEN = os.environ['TEST_BOT_TOKEN']
-BOT_NAME = "roopentestibot"
+BOT_NAME = "rexcubot"
 BOT_TG_ID = os.environ['TEST_BOT_ID']
 BOT_TG_ID_STR = str(BOT_TG_ID)
 
