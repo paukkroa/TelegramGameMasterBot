@@ -51,10 +51,10 @@ def main() -> None:
     application.add_handler(CommandHandler("force_end", handlers.end_session))
 
     # Retrieve statistics
-    application.add_handler(CommandHandler("stats_g", handlers.get_group_stats))
-    application.add_handler(CommandHandler("stats_p", handlers.get_player_stats))
-    application.add_handler(CommandHandler("rank_s", handlers.get_session_ranking))
-    application.add_handler(CommandHandler("rank_a", handlers.get_all_time_ranking))
+    application.add_handler(CommandHandler("stats_group", handlers.get_group_stats))
+    application.add_handler(CommandHandler("stats_player", handlers.get_player_stats))
+    application.add_handler(CommandHandler("rank_latest_tournament", handlers.get_session_ranking))
+    application.add_handler(CommandHandler("rank_alltime", handlers.get_all_time_ranking))
 
     # Games for testing
     application.add_handler(CommandHandler("numbergame", handlers.handle_number_game_start))
