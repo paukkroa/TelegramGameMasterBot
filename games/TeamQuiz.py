@@ -48,6 +48,7 @@ class TeamQuiz(Game):
         self.questions_for_game = []
         self.team_points = {}
         self.current_question = None
+        self.current_options = []
         self.is_round_ongoing = False
         self.player_points = {player_id: 0 for player_id in self.player_ids}
         # TODO: Disable keyboards so that only the latest is showing?
@@ -96,6 +97,7 @@ class TeamQuiz(Game):
 
         options = self.current_question['options']
         random.shuffle(options)
+        self.current_options = options
 
         keyboard = [
             [InlineKeyboardButton(option, callback_data=f"quiz:{option}")]
@@ -129,6 +131,10 @@ class TeamQuiz(Game):
         query = update.callback_query
         await query.answer()
         selected_option = query.data.split(':')[1]
+
+        # Quick workaround for "disabling" the old keyboards
+        if selected_option not in self.current_options:
+            return
 
         self.teams[answering_team]['has_answered'] = True
         correct_answers = self.current_question['correct']
@@ -224,6 +230,7 @@ class TeamQuiz(Game):
         self.current_round = 1
         self.team_points = {}
         self.current_question = None
+        self.current_options = []
         self.is_round_ongoing = False
         self.questions_for_game = []
 
