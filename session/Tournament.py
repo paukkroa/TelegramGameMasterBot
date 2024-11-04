@@ -4,13 +4,13 @@ from typing import Type
 import random
 import sqlite3
 
-from games import ChallengeGame, GuessNumber, TeamQuiz, Waterfall
+from games import ChallengeGame, GuessNumber, TeamQuiz, Waterfall, Exposed
 from games.Game import Game
 from session.EventPoller import EventPoller
 import db
 
 # Add games whenever they are implemented
-GAMES = [ChallengeGame, GuessNumber, TeamQuiz, Waterfall]
+GAMES = [ChallengeGame, GuessNumber, TeamQuiz, Waterfall, Exposed]
 
 class Tournament:
     def __init__(self, session_id: str, player_ids: list, number_of_games: int, update: Update,
