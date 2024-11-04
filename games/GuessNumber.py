@@ -5,7 +5,10 @@ import random
 
 import db
 from utils.helpers import get_username_by_id, convert_swigs_to_units
+from utils.logger import get_logger
 from games.Game import Game
+
+logger = get_logger(__name__)
 
 class GuessNumber(Game):
     def __init__(self, 
@@ -122,3 +125,7 @@ class GuessNumber(Game):
 
         if self.is_part_of_tournament:
             await self.start_next_game()
+        else:
+            db.end_session(self.sql_connection, self.session_id)
+            logger.info(f"Gamewise session {self.session_id} ended.")
+        

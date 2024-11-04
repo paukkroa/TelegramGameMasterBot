@@ -229,3 +229,6 @@ class TeamQuiz(Game):
 
         if self.is_part_of_tournament:
             await self.start_next_game()
+        else:
+            db.end_session(self.sql_connection, self.session_id)
+            logger.info(f"Gamewise session {self.session_id} ended.")
