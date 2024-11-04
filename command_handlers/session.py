@@ -102,3 +102,16 @@ async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except KeyError:
         logger.info(f"No waitlist found for chat {chat_id}")
         await update.message.reply_text("No waitlist found for the chat. Press /join to join the waitlist.")
+
+async def delete_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    waitlist = current_waitlists[chat_id]
+    try:
+        waitlist.clear()  # Is this needed anymore?
+        del waitlist
+        del current_waitlists[chat_id]
+        logger.info(f"Waitlist deleted for chat {chat_id}")
+        await update.message.reply_text("Waitlist has been deleted.")
+    except KeyError:
+        logger.info(f"No waitlist found for chat {chat_id}")
+        await update.message.reply_text("No waitlist found for the chat.")

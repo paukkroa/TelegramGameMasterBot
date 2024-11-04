@@ -10,10 +10,21 @@ from utils.config import current_waitlists, sql_connection
 
 logger = get_logger(__name__)
 
+async def delete_waitlist_quiet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    waitlist = current_waitlists[chat_id]
+    try:
+        waitlist.clear()  # Is this needed anymore?
+        del waitlist
+        del current_waitlists[chat_id]
+        logger.info(f"Waitlist deleted for chat {chat_id}")
+    except KeyError:
+        logger.info(f"No waitlist found for chat {chat_id}")
+
 async def handle_number_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     waitlist = current_waitlists[chat_id]
-    print(waitlist)
+    logger.info(f"Waitlist {waitlist}")
 
     session_id = db.start_session(sql_connection, chat_id)
     logger.info(f"Gamewise session {session_id} started for chat {chat_id}")
@@ -24,12 +35,13 @@ async def handle_number_game_start(update: Update, context: ContextTypes.DEFAULT
 
     game = GuessNumber(id=1, player_ids=waitlist.player_ids, update=update, context=context, session_id=session_id)
     logger.info(f'Guess number game start')
+    await delete_waitlist_quiet(update, context)
     await game.start()
 
 async def handle_challenge_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     waitlist = current_waitlists[chat_id]
-    print(waitlist)
+    logger.info(f"Waitlist {waitlist}")
 
     session_id = db.start_session(sql_connection, chat_id)
     logger.info(f"Gamewise session {session_id} started for chat {chat_id}")
@@ -41,12 +53,13 @@ async def handle_challenge_game_start(update: Update, context: ContextTypes.DEFA
     game = ChallengeGame(id=1, player_ids=waitlist.player_ids, update=update, context=context, session_id=session_id)
     game.set_rounds(5)
     logger.info(f"Challenge game start")
+    await delete_waitlist_quiet(update, context)
     await game.start()
 
 async def handle_team_quiz_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     waitlist = current_waitlists[chat_id]
-    print("Waitlist", waitlist)
+    logger.info(f"Waitlist {waitlist}")
 
     session_id = db.start_session(sql_connection, chat_id)
     logger.info(f"Gamewise session {session_id} started for chat {chat_id}")
@@ -58,6 +71,7 @@ async def handle_team_quiz_start(update: Update, context: ContextTypes.DEFAULT_T
     game = TeamQuiz(id=1, player_ids=waitlist.player_ids, update=update, context=context, session_id=session_id)
     game.set_rounds(4)
     logger.info(f"Team quiz start")
+    await delete_waitlist_quiet(update, context)
     await game.start()
 
 async def handle_exposed_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -75,4 +89,5 @@ async def handle_exposed_game_start(update: Update, context: ContextTypes.DEFAUL
     game = Exposed(id=1, player_ids=waitlist.player_ids, update=update, context=context, session_id=session_id)
     game.set_rounds(4)
     logger.info(f"Exposed game start")
+    await delete_waitlist_quiet(update, context)
     await game.start()
