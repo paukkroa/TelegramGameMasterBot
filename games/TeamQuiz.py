@@ -1,6 +1,5 @@
 import random
 
-import setuptools
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 from typing import Callable
@@ -44,13 +43,14 @@ class TeamQuiz(Game):
                          session_id=session_id)
 
         self.num_of_teams = 0
-        self.rounds = 8
+        self.rounds = 20
         self.current_round = 1
         self.questions_for_game = []
         self.team_points = {}
         self.current_question = None
         self.is_round_ongoing = False
         self.player_points = {player_id: 0 for player_id in self.player_ids}
+        # TODO: Disable keyboards so that only the latest is showing?
 
     async def start(self):
         await self.send_group_chat(f"Let's play team quiz!")
