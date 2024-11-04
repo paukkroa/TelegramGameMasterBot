@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 import db
 
 from ai_utils.llm import generic_message_llm_handler
-from utils.config import sql_connection, BOT_TG_ID
+from utils.config import sql_connection, BOT_TG_ID, BOT_NAME
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -43,7 +43,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 If you have any questions, feel free to ask by tagging me in the group chat (remember to give me admin rights to enable this). Have fun!
                                     
-Type /help-ai to get instructions on how to interact with the AI Game Master.
+Type /help_ai to get instructions on how to interact with the AI Game Master.
 """)
 
 # TODO: Add command to list all available games
@@ -61,15 +61,20 @@ async def handle_generic_message(update: Update, context: ContextTypes.DEFAULT_T
 async def ai_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help-ai is issued."""
     user = update.effective_user
-    await update.message.reply_text(rf"""The AI features are only available in group chats.
+    await update.message.reply_text(rf"""Tag me and write your message, like this: @{BOT_NAME} <message>.
                                     
 Enable AI features by giving the bot admin rights in the group chat.
                                     
 To set the context for the AI Game Master, use the following commands:
 - /context_all: Use all messages in the chat as context.
+                                    
 - /context_static: Use only messages within a static window as context. Use /start_context to start the window and /end_context to end it. You can also define specific starting and end points, for example: "/start_context 2024-10-03 16:00:00" or "/start_context 2024-10-03" (defaults to 00:00:00).
+                                    
 - /context_rolling: Use only messages within a rolling window as context. Default is 1 hour. You can define the window size and time unit, for example: "/context_rolling 5 h" or "/context_rolling 2 d".
+                                    
 - /context_last_n: Use only the last N messages as context. Default is 10. You can define the number of messages, for example: "/context_last_n 20".
+                                    
 - /context_session: Use only messages witihin a tournament as context. The messages won't be available after the tournament ends.
+                                    
 - /context_none: Disable context for the AI Game Master.
 """)
