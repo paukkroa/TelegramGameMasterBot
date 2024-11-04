@@ -91,6 +91,10 @@ async def handle_exposed_game_start(update: Update, context: ContextTypes.DEFAUL
     waitlist = current_waitlists[chat_id]
     logger.info(f"Waitlist {waitlist}")
 
+    if len(waitlist.player_ids) < 2:
+        await update.message.reply_text("Not enough players to start the game.")
+        return
+
     session_id = db.start_session(sql_connection, chat_id)
     logger.info(f"Gamewise session {session_id} started for chat {chat_id}")
 
