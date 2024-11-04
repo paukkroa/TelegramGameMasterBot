@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from games import ChallengeGame, GuessNumber, TeamQuiz
+from games import ChallengeGame, GuessNumber, TeamQuiz, Exposed
 
 from utils.logger import get_logger
 from utils.config import current_waitlists
@@ -37,4 +37,14 @@ async def handle_team_quiz_start(update: Update, context: ContextTypes.DEFAULT_T
     game = TeamQuiz(id=1, player_ids=waitlist.player_ids, update=update, context=context)
     game.set_rounds(4)
     logger.info(f"Team quiz start")
+    await game.start()
+
+async def handle_exposed_game_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    waitlist = current_waitlists[chat_id]
+    logger.info(f"Waitlist {waitlist}")
+
+    game = Exposed(id=1, player_ids=waitlist.player_ids, update=update, context=context)
+    game.set_rounds(4)
+    logger.info(f"Exposed game start")
     await game.start()
