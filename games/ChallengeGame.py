@@ -6,7 +6,10 @@ from typing import Callable
 import db
 from games.Game import Game
 from resources.challenges import all_challenges_by_level
+from utils.logger import get_logger
 from utils.helpers import get_username_by_id, convert_swigs_to_units, convert_shots_to_units
+
+logger = get_logger(__name__)
 
 class ChallengeGame(Game):
     def __init__(self, 
@@ -82,3 +85,6 @@ class ChallengeGame(Game):
 
         if self.is_part_of_tournament:
             await self.start_next_game()
+        else:
+            db.end_session(self.sql_connection, self.session_id)
+            logger.info(f"Gamewise session {self.session_id} ended.")

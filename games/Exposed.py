@@ -1,4 +1,5 @@
 import random
+import time
 
 import setuptools
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -35,7 +36,7 @@ class Exposed(Game):
                          start_next_game=start_next_game,
                          session_id=session_id)
 
-        self.rounds = 8
+        self.rounds = 15
         self.current_round = 1
         self.timer_seconds = 20
         self.questions_for_game = []
@@ -53,8 +54,7 @@ class Exposed(Game):
             self.player_usernames[player_id] = await get_username_by_id(player_id, self.context)
 
     async def start(self):
-        await self.send_group_chat(f"Let's play Exposed!")
-        await self.send_group_chat("Send /begin when you are ready.")
+        await self.send_group_chat(f"Let's play Exposed! Send /begin when you are ready.")
 
         await self.populate_player_usernames()
         self.draw_questions()
@@ -74,6 +74,8 @@ class Exposed(Game):
         self.round_votes = []
         self.current_question = self.questions_for_game[self.current_round - 1]
 
+        round_message = f"Exposed round {self.current_round}/{self.rounds}!\nYou have {self.timer_seconds} seconds to answer!\n\n{self.current_question['question']}"
+
         available_options = list(self.player_usernames.values())
         logger.info(f"Available options: {available_options}")
         options = random.sample(available_options, 2)
@@ -87,9 +89,17 @@ class Exposed(Game):
 
         self.vote_results[self.current_round] = []
 
-        await self.send_group_chat(f"You have {self.timer_seconds} seconds to answer!")
-        await self.context.bot.send_message(chat_id=self.chat_id, text=self.current_question['question'],
-                                            reply_markup=reply_markup)
+        success = False
+        while not success:
+            try:
+                await self.context.bot.send_message(chat_id=self.chat_id, text=round_message,
+                                                reply_markup=reply_markup)
+                success = True
+            except:
+                logger.error("Error sending message, retrying in 2 seconds")
+                time.sleep(2)
+                logger.error("Retrying message send")
+
         # Start a timer for answering
         self.context.job_queue.run_once(self.timer_end, self.timer_seconds)
         await self.context.job_queue.start()
@@ -188,3 +198,6 @@ class Exposed(Game):
 
         if self.is_part_of_tournament:
             await self.start_next_game()
+        else:
+            db.end_session(self.sql_connection, self.session_id)
+            logger.info(f"Gamewise session {self.session_id} ended.")
