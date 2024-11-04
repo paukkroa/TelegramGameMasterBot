@@ -5,12 +5,29 @@ import sqlite3
 
 from db.session_queries import *
 from db.settings_queries import get_chat_settings
-from ai_utils.llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT, SYS_PROMPT_WITH_CONTEXT_SESSION_ONLY
+from ai_utils.llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT, SYS_PROMPT_WITH_CONTEXT_SESSION_ONLY, SUMMARIZE_PROMPT
 from utils.helpers import get_username_by_id
 from utils.logger import get_logger
 from utils.config import BOT_NAME, BOT_TG_ID
 
 logger = get_logger(__name__)
+
+def summarize_context(context: list) -> str:
+    """
+    Summarize the context to a string
+    """
+    response = ollama.chat(model=LLM_MODEL, messages=[
+                {
+                'role': 'system',
+                'content': SUMMARIZE_PROMPT,
+                },
+                {
+                    'role': 'user',
+                    'content': f"{context}",
+                },
+            ])
+    llm_response = response['message']['content']
+    return llm_response
 
 # TODO: Add a check to see if Ollama is available
 async def generic_message_llm_handler(update: Update, 
@@ -32,7 +49,9 @@ async def generic_message_llm_handler(update: Update,
         # Retrieve all of the message history
         if chat_settings['context_window_type'] == 'all':
             context = get_all_chat_messages(sql_connection, chat_id)
-            logger.info(f"Retrieved all chat messages for chat {chat_id}: {context}")
+            logger.info(f"Retrieved all chat messages for chat {chat_id}")
+            #summary = summarize_context(context)
+            #logger.info(f"Summarized context for chat {chat_id}: {summary}")
             response = ollama.chat(model=LLM_MODEL, messages=[
                 {
                 'role': 'system',
@@ -47,7 +66,7 @@ async def generic_message_llm_handler(update: Update,
         # Retrieve messages with a rolling time window
         elif chat_settings['context_window_type'] == 'rolling':
             context = get_chat_messages_from_rolling_time_window(sql_connection, chat_id)
-            logger.info(f"Retrieved rolling context for chat {chat_id}: {context}")
+            logger.info(f"Retrieved rolling context for chat {chat_id}")
             response = ollama.chat(model=LLM_MODEL, messages=[
                 {
                 'role': 'system',
@@ -63,7 +82,7 @@ async def generic_message_llm_handler(update: Update,
         # Retrieve messages with a static time window
         elif chat_settings['context_window_type'] == 'static':
             context = get_chat_messages_within_time_window(sql_connection, chat_id)
-            logger.info(f"Retrieved static context messages for chat {chat_id}: {context}")
+            logger.info(f"Retrieved static context messages for chat {chat_id}")
             response = ollama.chat(model=LLM_MODEL, messages=[
                 {
                 'role': 'system',
@@ -78,7 +97,7 @@ async def generic_message_llm_handler(update: Update,
 
         elif chat_settings['context_window_type'] == 'n-messages':
             context = get_last_n_messages(sql_connection, chat_id)
-            logger.info(f"Retrieved last n-messages (n: {chat_settings['n_messages']}) for chat {chat_id}: {context}")
+            logger.info(f"Retrieved last n-messages (n: {chat_settings['n_messages']}) for chat {chat_id}")
             response = ollama.chat(model=LLM_MODEL, messages=[
                 {
                 'role': 'system',
@@ -93,7 +112,7 @@ async def generic_message_llm_handler(update: Update,
 
         elif chat_settings['context_window_type'] == 'session':
             context = get_session_messages(sql_connection, session_id)
-            logger.info(f"Retrieved session {session_id} context for chat {chat_id}: {context}")
+            logger.info(f"Retrieved session {session_id} context for chat {chat_id}")
             response = ollama.chat(model=LLM_MODEL, messages=[
                 {
                 'role': 'system',
