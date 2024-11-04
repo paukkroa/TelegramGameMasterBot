@@ -35,7 +35,7 @@ class Exposed(Game):
                          start_next_game=start_next_game,
                          session_id=session_id)
 
-        self.rounds = 8
+        self.rounds = 10
         self.current_round = 1
         self.timer_seconds = 20
         self.questions_for_game = []
