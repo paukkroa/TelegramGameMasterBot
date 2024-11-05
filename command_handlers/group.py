@@ -19,7 +19,7 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         logger.info(f"New member joined: {member.username}, ID: {member.id}")
         await update.message.reply_text(f"Welcome {member.first_name}")
 
-        db.insert_player(sql_connection, member.id)
+        db.insert_player(sql_connection, member.id, member.username)
 
 
 async def list_group_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
