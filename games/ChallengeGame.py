@@ -32,9 +32,7 @@ class ChallengeGame(Game):
         self.current_challenge_number = 1
 
     async def start(self):
-        await self.send_group_chat("Let's play random challenges!")
-        await self.send_group_chat("Send /next whenever you are ready for the next challenge")
-
+        await self.send_group_chat("Let's play random challenges!\n\nSend /next whenever you are ready for the next challenge")
         self.handlers.append(CommandHandler("next", self.get_next_challenge))
         self.add_handlers()
 
