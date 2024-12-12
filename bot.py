@@ -61,6 +61,7 @@ def main() -> None:
     application.add_handler(CommandHandler("challenges", handlers.handle_challenge_game_start))
     application.add_handler(CommandHandler("teamquiz", handlers.handle_team_quiz_start))
     application.add_handler(CommandHandler("exposed", handlers.handle_exposed_game_start))
+    application.add_handler(CommandHandler("teamquizv2", handlers.handle_team_quiz_v2_start))
 
     # Handle generic group messages and respond with LLM
     application.add_handler(MessageHandler(
