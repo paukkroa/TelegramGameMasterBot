@@ -22,7 +22,13 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
     ```bash
     pip install -r requirements.txt
     ```
-4. **Configure Ollama to use LLM features**:
+4. **Export bot variables**:
+    ```bash
+    export TEST_BOT_TOKEN='token'
+    export TEST_BOT_IT='id'
+    export TEST_BOT_NAME='bot_username'
+    ```
+5. **(Optional) Configure Ollama to use LLM features**:
    Set up Ollama according to their instructions (https://ollama.com).
    Download a model, e.g.:
    ```bash
@@ -33,7 +39,7 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
    ```bash
     ollama serve
     ```
-   We won't offer any API support due to data privacy concerns regarding the nature and use cases of the project.
+   We won't offer OpenAI API support due to data privacy concerns regarding the nature and use cases of the project.
    
     
 
@@ -41,12 +47,11 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
 
 ## Commands
 
-- `/start` - Initialize the bot.
+- `/start` - Initialize the bot in a chat. Needs to be run privately and in the game group by each user.
 - `/help` - Get help.
-- `/addme` - Add me to a chat group, required to participate in games
-- `/join` - Join a Tournament waitlist
-- `/waitlist` - See players currently on the Tournament waitlist
-- `/players` - List registered players
+- `/join` - Join a Tournament waitlist. Games are based on the people on the waitlist.
+- `/waitlist` - See players currently on the Tournament waitlist.
+- `/players` - List registered players of the current chat.
 - `/tournament (n)` - Start a tournament of n games. Default is 5 games.
 - `/force_end` - End a tournament.
 - `@botusername Message` - Chat with the bot. Gets the chat context in tournaments, otherwise gives zero-shot responses.
