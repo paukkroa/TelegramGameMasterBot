@@ -10,7 +10,7 @@ from session.EventPoller import EventPoller
 import db
 
 # Add games whenever they are implemented
-GAMES = [ChallengeGame, GuessNumber, TeamQuiz, Waterfall, Exposed]
+GAMES = [ChallengeGame, GuessNumber, Waterfall, Exposed]
 
 class Tournament:
     def __init__(self, session_id: str, player_ids: list, number_of_games: int, update: Update,
