@@ -12,7 +12,7 @@ from resources.questions import questions
 
 logger = get_logger(__name__)
 
-class TeamQuiz(Game):
+class TeamQuizV2(Game):
     """
     Players are divided into teams.
     Every player gets a trivia question with 4 options.
@@ -51,12 +51,13 @@ class TeamQuiz(Game):
         self.current_options = []
         self.is_round_ongoing = False
         self.player_points = {player_id: 0 for player_id in self.player_ids}
+        self.timer_seconds = 20
+        self.guessed_right = {} # team_id: true/false
         # TODO: Disable keyboards so that only the latest is showing?
 
     async def start(self):
-        await self.send_group_chat(f"Let's play team quiz!")
         await self.draw_teams()
-        await self.send_group_chat("Send /begin when you want to start.")
+        await self.send_group_chat("Let's play team quiz!\nSend /begin when you want to start.")
 
         for team_id in self.teams.keys():
             self.team_points[team_id] = 0
@@ -64,6 +65,7 @@ class TeamQuiz(Game):
         self.draw_questions()
 
         self.handlers.append(CommandHandler("begin", self.next_question))
+        self.handlers.append(CommandHandler("next", self.next_question))
         self.handlers.append(CallbackQueryHandler(self.handle_answer, pattern=r'^quiz:'))
         self.add_handlers()
 
@@ -92,6 +94,10 @@ class TeamQuiz(Game):
         self.questions_for_game = random.sample(questions, self.rounds)
 
     async def next_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if self.is_round_ongoing:
+            await self.send_player_chat(update.effective_user.id, "Round is already ongoing.")
+            return
+        
         self.is_round_ongoing = True
         self.current_question = self.questions_for_game[self.current_round - 1]
 
@@ -107,6 +113,10 @@ class TeamQuiz(Game):
 
         await self.send_group_chat(message=self.current_question['question'],
                                             reply_markup=reply_markup)
+        
+        # Start timer
+        self.context.job_queue.run_once(self.timer_end, self.timer_seconds)
+        await self.context.job_queue.start()
 
         # TODO: decide if question is sent in the group or dm
         """        
@@ -115,9 +125,14 @@ class TeamQuiz(Game):
                                                 reply_markup=reply_markup)
         """
 
+    async def timer_end(self, context):
+        await self.send_group_chat("Time's up!")
+        await self.end_round()
+
     async def handle_answer(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         answering_player = update.effective_user
         answering_team = self.player_teams[answering_player.id]
+        self.guessed_right = {} # team_id: true/false
 
         logger.info(f"Answer by {answering_player.username}")
 
@@ -139,39 +154,60 @@ class TeamQuiz(Game):
         self.teams[answering_team]['has_answered'] = True
         correct_answers = self.current_question['correct']
 
-        # Team has answered right -> they win the round instantly
+        # Team has answered right
         if selected_option in correct_answers:
             self.team_points[answering_team] += 1
             self.player_points[answering_player.id] += 1
-            await self.send_group_chat(f"Round winner is team {answering_team}! {answering_player.username} "
-                                       f"got the correct answer.")
-            await self.end_round()
+            self.guessed_right[answering_team] = True
+            await self.send_player_chat(answering_player.id, "Correct answer! Well done.")
+            #await self.send_group_chat(f"Round winner is team {answering_team}! {answering_player.username} "
+            #                           f"got the correct answer.")
+            #await self.end_round()
 
         # Wrong guess
         else:
-            await self.send_group_chat(f"{answering_player.username} from team {answering_team} "
-                                       f"guessed wrong.")
+            #await self.send_group_chat(f"{answering_player.username} from team {answering_team} "
+            #                           f"guessed wrong.")
+            self.guessed_right[answering_team] = False
+            await self.send_player_chat(answering_player.id, "Wrong guess. Try again next round.")
 
         # Everyone has answered and no right answers
         if all(team['has_answered'] for team in self.teams.values()):
-            await self.send_group_chat("Round ended. Everyone guessed wrong.")
+            #await self.send_group_chat("Round ended. Everyone guessed wrong.")
             await self.end_round()
 
     async def end_round(self):
         self.is_round_ongoing = False
         self.current_round += 1
 
+        await self.context.job_queue.stop(wait=False) # remove timer
+
         for team_id in self.teams.keys():
             self.teams[team_id]['has_answered'] = False
 
+        result_message = self.calculate_round_results()
+
         if self.current_round > self.rounds:
+            await self.send_group_chat(result_message)
             await self.end()
             return
+        
+        result_message += f"\n\nSend /next to start the next round."
+        await self.send_group_chat(result_message)
 
-        await self.next_question(self.update, self.context)
+        #await self.next_question(self.update, self.context)
+
+    def calculate_round_results(self):
+        # No winners
+        if not any(value for value in self.guessed_right.values()):
+            wrong_guesses = [team_id for team_id, guessed_right in self.guessed_right.items() if not guessed_right]
+            return f"Results:\n\n🏆 Correct guesses: None :(\n\n💩 Wrong guesses: {', '.join(map(str, wrong_guesses))}"
+        else:
+            wrong_guesses = [team_id for team_id, guessed_right in self.guessed_right.items() if not guessed_right]
+            correct_guesses = [team_id for team_id, guessed_right in self.guessed_right.items() if guessed_right]
+            return f"Results:\n\n🏆 Correct guesses: {', '.join(map(str, correct_guesses))}\n\n💩 Wrong guesses: {', '.join(map(str, wrong_guesses))}"
 
     async def end(self):
-        await self.send_group_chat("Team quiz ended.")
         self.remove_handlers()
 
         # Sort by points desc
@@ -199,7 +235,7 @@ class TeamQuiz(Game):
 
         # SHOW FINAL RANKING AND DRINKS
 
-        ranking_msg = "Final ranking of the quiz:\n"
+        ranking_msg = "Team Quiz ended\n\nFinal ranking of the quiz:\n"
         drink_msg = "Drinks awarded:\n"
 
         winner_points = self.team_points[first_team_id]
@@ -223,8 +259,9 @@ class TeamQuiz(Game):
 
         ranking_msg += f"\n\nTop player was {best_player_username} with {best_player_points} points."
 
-        await self.send_group_chat(ranking_msg)
-        await self.send_group_chat(drink_msg)
+        results_msg = ranking_msg + "\n\n" + drink_msg
+
+        await self.send_group_chat(results_msg)
 
         self.num_of_teams = 0
         self.current_round = 1

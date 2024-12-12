@@ -6,9 +6,10 @@ import sqlite3
 from db.session_queries import *
 from db.settings_queries import get_chat_settings
 from ai_utils.llm_utils import LLM_MODEL, SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT, SYS_PROMPT_WITH_CONTEXT_SESSION_ONLY, SUMMARIZE_PROMPT
-from utils.helpers import get_username_by_id
+from utils.helpers import get_username_by_id, send_chat_safe
 from utils.logger import get_logger
 from utils.config import BOT_NAME, BOT_TG_ID
+import requests
 
 logger = get_logger(__name__)
 
@@ -29,15 +30,35 @@ def summarize_context(context: list) -> str:
     llm_response = response['message']['content']
     return llm_response
 
+def is_ollama_available() -> bool:
+    """
+    Check if Ollama service is available at localhost:11434
+    """
+    try:
+        response = requests.get('http://localhost:11434')
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+    except requests.exceptions.ConnectionError:
+        return False
+
 # TODO: Add a check to see if Ollama is available
 async def generic_message_llm_handler(update: Update, 
-                                      context: ContextTypes.DEFAULT_TYPE, 
+                                      tg_context: ContextTypes.DEFAULT_TYPE, 
                                       sql_connection: sqlite3.Connection, 
                                       bot_name: str = BOT_NAME, 
                                       bot_tg_id: int = BOT_TG_ID) -> None:
+    
+    # Check if ollama is available
+    if not is_ollama_available():
+        logger.error("Ollama service is not available")
+        await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message="Unfortunately my brain is not available right now. Please try again later.")
+        return
+
     msg = update.message.text
     sender_id = update.effective_user.id
-    sender_name = await get_username_by_id(sender_id, context)
+    sender_name = await get_username_by_id(sender_id, tg_context)
     chat_id = update.effective_chat.id
     session_id = get_latest_ongoing_session_by_chat(sql_connection, chat_id)
     chat_settings = get_chat_settings(sql_connection, chat_id)
@@ -145,7 +166,8 @@ async def generic_message_llm_handler(update: Update,
         # Add bot message to the chat context
         add_message_to_chat_context(sql_connection, chat_id, bot_tg_id, llm_response)
         logger.info(f"Added message from bot ({bot_tg_id} to chat context ({chat_id})")
-        await update.message.reply_text(llm_response)
+
+        await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message=llm_response)
 
     # Bot is not mentioned, add message to context
     else: 

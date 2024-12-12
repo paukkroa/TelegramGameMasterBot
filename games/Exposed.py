@@ -55,7 +55,7 @@ class Exposed(Game):
             self.player_usernames[player_id] = await get_username_by_id(player_id, self.context)
 
     async def start(self):
-        await self.send_group_chat(f"Let's play Exposed! Send /begin when you are ready.")
+        await self.send_group_chat(f"Let's play Exposed!\n\nSend /begin when you are ready.\nRemember that you will have only {self.timer_seconds} seconds to answer!")
 
         await self.populate_player_usernames()
         self.draw_questions()
@@ -75,7 +75,7 @@ class Exposed(Game):
         self.round_votes = []
         self.current_question = self.questions_for_game[self.current_round - 1]
 
-        round_message = f"Exposed round {self.current_round}/{self.rounds}!\nYou have {self.timer_seconds} seconds to answer!\n\n{self.current_question['question']}"
+        round_message = f"Round {self.current_round}/{self.rounds}!\n\n{self.current_question['question']}"
 
         available_options = list(self.player_usernames.values())
         logger.info(f"Available options: {available_options}")
@@ -91,16 +91,8 @@ class Exposed(Game):
 
         self.vote_results[self.current_round] = []
 
-        success = False
-        while not success:
-            try:
-                await self.context.bot.send_message(chat_id=self.chat_id, text=round_message,
+        await self.send_group_chat(message=round_message,
                                                 reply_markup=reply_markup)
-                success = True
-            except:
-                logger.error("Error sending message, retrying in 2 seconds")
-                time.sleep(2)
-                logger.error("Retrying message send")
 
         # Start a timer for answering
         self.context.job_queue.run_once(self.timer_end, self.timer_seconds)

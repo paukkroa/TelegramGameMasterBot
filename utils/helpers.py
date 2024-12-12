@@ -1,5 +1,10 @@
 from telegram.error import BadRequest
+from telegram.error import RetryAfter
+import asyncio
 from telegram.ext import ContextTypes
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 async def get_username_by_id(user_id: str, context: ContextTypes.DEFAULT_TYPE) -> str:
     try:
@@ -21,3 +26,14 @@ def convert_shots_to_units(shots: int) -> float:
     alc_ml = 30 * 0.4 * shots
     units = alc_ml / 15.2
     return units
+
+async def send_chat_safe(context: ContextTypes.DEFAULT_TYPE, chat_id: int, message: str, reply_markup=None):
+    try:
+        await context.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup)
+    except RetryAfter as e:
+        logger.info(f"Caught flood control, retrying after {e.retry_after+1} seconds")
+        await asyncio.sleep(e.retry_after+1)
+        await send_chat_safe(context, chat_id, message, reply_markup)
+    except BadRequest as e:
+        logger.info(e)
+        return
