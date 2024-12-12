@@ -208,7 +208,6 @@ class TeamQuizV2(Game):
             return f"Results:\n\n🏆 Correct guesses: {', '.join(map(str, correct_guesses))}\n\n💩 Wrong guesses: {', '.join(map(str, wrong_guesses))}"
 
     async def end(self):
-        await self.send_group_chat("Team quiz ended.")
         self.remove_handlers()
 
         # Sort by points desc
@@ -236,7 +235,7 @@ class TeamQuizV2(Game):
 
         # SHOW FINAL RANKING AND DRINKS
 
-        ranking_msg = "Final ranking of the quiz:\n"
+        ranking_msg = "Team Quiz ended\n\nFinal ranking of the quiz:\n"
         drink_msg = "Drinks awarded:\n"
 
         winner_points = self.team_points[first_team_id]
@@ -260,8 +259,9 @@ class TeamQuizV2(Game):
 
         ranking_msg += f"\n\nTop player was {best_player_username} with {best_player_points} points."
 
-        await self.send_group_chat(ranking_msg)
-        await self.send_group_chat(drink_msg)
+        results_msg = ranking_msg + "\n\n" + drink_msg
+
+        await self.send_group_chat(results_msg)
 
         self.num_of_teams = 0
         self.current_round = 1
