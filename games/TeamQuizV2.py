@@ -111,7 +111,7 @@ class TeamQuizV2(Game):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        await self.context.bot.send_message(chat_id=self.chat_id, text=self.current_question['question'],
+        await self.send_group_chat(message=self.current_question['question'],
                                             reply_markup=reply_markup)
         
         # Start timer

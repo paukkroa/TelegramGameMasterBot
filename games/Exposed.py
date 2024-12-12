@@ -91,16 +91,8 @@ class Exposed(Game):
 
         self.vote_results[self.current_round] = []
 
-        success = False
-        while not success:
-            try:
-                await self.context.bot.send_message(chat_id=self.chat_id, text=round_message,
+        await self.send_group_chat(message=round_message,
                                                 reply_markup=reply_markup)
-                success = True
-            except:
-                logger.error("Error sending message, retrying in 2 seconds")
-                time.sleep(2)
-                logger.error("Retrying message send")
 
         # Start a timer for answering
         self.context.job_queue.run_once(self.timer_end, self.timer_seconds)

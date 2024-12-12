@@ -7,7 +7,7 @@ from typing import Callable
 import db
 from utils.logger import get_logger
 from utils.config import sql_connection, BOT_TG_ID
-from utils.helpers import get_username_by_id
+from utils.helpers import get_username_by_id, send_chat_safe
 
 logger = get_logger(__name__)
 
@@ -62,13 +62,13 @@ class Game:
         db.add_message_to_chat_context(self.sql_connection, self.chat_id, self.bot_tg_id, msg, self.session_id) 
         await self.send_group_chat(msg)
 
-    async def send_group_chat(self, message: str):
+    async def send_group_chat(self, message: str, reply_markup=None):
         db.add_message_to_chat_context(self.sql_connection, self.chat_id, self.bot_tg_id, message, self.session_id) 
-        await self.context.bot.send_message(chat_id=self.chat_id, text=message)
+        await send_chat_safe(context=self.context, chat_id=self.chat_id, text=message, reply_markup=reply_markup)
 
-    async def send_player_chat(self, user_id: int, message: str):
+    async def send_player_chat(self, user_id: int, message: str, reply_markup=None):
         db.add_message_to_chat_context(self.sql_connection, self.chat_id, self.bot_tg_id, message, self.session_id)
-        await self.context.bot.send_message(chat_id=user_id, text=message)
+        await send_chat_safe(context=self.context, chat_id=user_id, text=message, reply_markup=reply_markup)
 
     def add_handlers(self):
         for handler in self.handlers:
