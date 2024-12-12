@@ -64,11 +64,11 @@ class Game:
 
     async def send_group_chat(self, message: str, reply_markup=None):
         db.add_message_to_chat_context(self.sql_connection, self.chat_id, self.bot_tg_id, message, self.session_id) 
-        await send_chat_safe(context=self.context, chat_id=self.chat_id, text=message, reply_markup=reply_markup)
+        await send_chat_safe(context=self.context, chat_id=self.chat_id, message=message, reply_markup=reply_markup)
 
     async def send_player_chat(self, user_id: int, message: str, reply_markup=None):
         db.add_message_to_chat_context(self.sql_connection, self.chat_id, self.bot_tg_id, message, self.session_id)
-        await send_chat_safe(context=self.context, chat_id=user_id, text=message, reply_markup=reply_markup)
+        await send_chat_safe(context=self.context, chat_id=user_id, message=message, reply_markup=reply_markup)
 
     def add_handlers(self):
         for handler in self.handlers:
