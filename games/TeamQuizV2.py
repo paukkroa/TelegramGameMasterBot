@@ -23,7 +23,6 @@ class TeamQuizV2(Game):
     Options for implementation:
 
     - Let every team answer and correct guesses get points
-    - (CURRENT) Only fastest correct answer gets points
     """
     def __init__(self,
                  id: int,
@@ -160,20 +159,14 @@ class TeamQuizV2(Game):
             self.player_points[answering_player.id] += 1
             self.guessed_right[answering_team] = True
             await self.send_player_chat(answering_player.id, "Correct answer! Well done.")
-            #await self.send_group_chat(f"Round winner is team {answering_team}! {answering_player.username} "
-            #                           f"got the correct answer.")
-            #await self.end_round()
 
         # Wrong guess
         else:
-            #await self.send_group_chat(f"{answering_player.username} from team {answering_team} "
-            #                           f"guessed wrong.")
             self.guessed_right[answering_team] = False
             await self.send_player_chat(answering_player.id, "Wrong guess. Try again next round.")
 
         # Everyone has answered and no right answers
         if all(team['has_answered'] for team in self.teams.values()):
-            #await self.send_group_chat("Round ended. Everyone guessed wrong.")
             await self.end_round()
 
     async def end_round(self):
@@ -195,17 +188,24 @@ class TeamQuizV2(Game):
         result_message += f"\n\nSend /next to start the next round."
         await self.send_group_chat(result_message)
 
-        #await self.next_question(self.update, self.context)
-
     def calculate_round_results(self):
         # No winners
         if not any(value for value in self.guessed_right.values()):
             wrong_guesses = [team_id for team_id, guessed_right in self.guessed_right.items() if not guessed_right]
-            return f"Results:\n\n🏆 Correct guesses: None :(\n\n💩 Wrong guesses: {', '.join(map(str, wrong_guesses))}"
+            wrong_guesses_str = "\n"
+            for team_id in wrong_guesses:
+                wrong_guesses_str = wrong_guesses_str + f"Team {team_id}: ({', '.join([member['username'] for member in self.teams[team_id]['members']])})\n"
+            return f"Results:\n\n🏆 Correct guesses: None :(\n\n💩 Wrong guesses: {wrong_guesses_str}"
         else:
             wrong_guesses = [team_id for team_id, guessed_right in self.guessed_right.items() if not guessed_right]
             correct_guesses = [team_id for team_id, guessed_right in self.guessed_right.items() if guessed_right]
-            return f"Results:\n\n🏆 Correct guesses: {', '.join(map(str, correct_guesses))}\n\n💩 Wrong guesses: {', '.join(map(str, wrong_guesses))}"
+            wrong_guesses_str = "\n"
+            for team_id in wrong_guesses:
+                wrong_guesses_str = wrong_guesses_str + f"Team {team_id}: ({', '.join([member['username'] for member in self.teams[team_id]['members']])})\n"
+            correct_guesses_str = "\n"
+            for team_id in correct_guesses:
+                correct_guesses_str = correct_guesses_str + f"Team {team_id}: ({', '.join([member['username'] for member in self.teams[team_id]['members']])})\n"
+            return f"Results:\n\n🏆 Correct guesses: {correct_guesses_str}\n\n💩 Wrong guesses: {wrong_guesses_str}"
 
     async def end(self):
         self.remove_handlers()
