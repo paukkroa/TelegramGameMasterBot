@@ -55,7 +55,7 @@ class GuessNumber(Game):
                 self.invalid_players.append(get_username_by_id(player_id, self.context))
 
         if self.invalid_players:
-            await self.send_group_chat(f"Could not send messages to {', '.join(self.invalid_players)}.")
+            await self.send_group_chat(f"Could not send messages to {', '.join(self.invalid_players)}, these players are skipped.")
 
         # Poll for answers in private messages
         self.handlers.append(MessageHandler(
