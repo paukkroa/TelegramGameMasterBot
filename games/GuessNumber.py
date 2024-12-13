@@ -1,5 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes, MessageHandler, filters
+from telegram.error import Forbidden
 from typing import Callable
 import random
 
@@ -31,13 +32,19 @@ class GuessNumber(Game):
         self.guesses = {player_id: None for player_id in player_ids} # Track guess of each user - {id, value}
         self.drinks = {player_id: None for player_id in player_ids}
         self.winner_id = 0
+        self.invalid_players = []
 
     async def start(self):
         await self.send_group_chat(f"Let's play number game!")
         self._draw_number()
 
         for player_id in self.player_ids:
-            await self.send_player_chat(player_id, "Guess a number between 1 and 20")
+            if await self.send_player_chat(player_id, "Guess a number between 1 and 20") == Forbidden:
+                self.guesses[player_id] = 0
+                self.invalid_players.append(get_username_by_id(player_id, self.context))
+
+        if self.invalid_players:
+            await self.send_group_chat(f"Could not send messages to {', '.join(self.invalid_players)}.")
 
         # Poll for answers in private messages
         self.handlers.append(MessageHandler(

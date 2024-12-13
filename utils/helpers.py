@@ -1,5 +1,5 @@
 from telegram.error import BadRequest
-from telegram.error import RetryAfter
+from telegram.error import RetryAfter, Forbidden
 import asyncio
 from telegram.ext import ContextTypes
 from utils.logger import get_logger
@@ -34,6 +34,9 @@ async def send_chat_safe(context: ContextTypes.DEFAULT_TYPE, chat_id: int, messa
         logger.info(f"Caught flood control, retrying after {e.retry_after+1} seconds")
         await asyncio.sleep(e.retry_after+1)
         await send_chat_safe(context, chat_id, message, reply_markup)
+    except Forbidden as e: # Player has not initiated a private chat with the bot
+        logger.info(e)
+        return e
     except BadRequest as e:
         logger.info(e)
-        return
+        return e
