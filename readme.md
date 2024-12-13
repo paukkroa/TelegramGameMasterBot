@@ -24,9 +24,9 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
     ```
 4. **Export bot variables**:
     ```bash
-    export TEST_BOT_TOKEN='token'
-    export TEST_BOT_IT='id'
-    export TEST_BOT_NAME='bot_username'
+    export BOT_TOKEN='token'
+    export BOT_IT='id'
+    export BOT_NAME='bot_username'
     ```
 5. **(Optional) Configure Ollama to use LLM features**:
    Set up Ollama according to their instructions (https://ollama.com).
