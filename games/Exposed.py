@@ -164,7 +164,10 @@ class Exposed(Game):
 
     async def end_round(self):
         self.is_round_ongoing = False
-        await self.context.job_queue.stop(wait=False)
+        try: 
+            await self.context.job_queue.stop(wait=False)
+        except:
+            pass
         if len(self.round_votes) > 0:
             results = await self.calculate_results()
             result_message = "Results:\n"
