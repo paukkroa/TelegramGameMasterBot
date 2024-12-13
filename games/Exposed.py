@@ -10,7 +10,7 @@ import db
 from games.Game import Game
 from utils.logger import get_logger
 from utils.helpers import get_username_by_id, convert_swigs_to_units, convert_shots_to_units
-from resources.exposed import exposed
+from resources.exposed import get_styles, get_questionset
 
 logger = get_logger(__name__)
 
@@ -37,6 +37,9 @@ class Exposed(Game):
                          session_id=session_id)
 
         self.rounds = 15
+        self.styles = get_styles()
+        self.questionset = get_questionset(self.styles[0]) # easiest questionset
+        self.started = False
         self.current_round = 1
         self.timer_seconds = 20
         self.questions_for_game = []
@@ -55,12 +58,17 @@ class Exposed(Game):
             self.player_usernames[player_id] = await get_username_by_id(player_id, self.context)
 
     async def start(self):
-        await self.send_group_chat(f"Let's play Exposed!\n\nSend /begin when you are ready.\nRemember that you will have only {self.timer_seconds} seconds to answer!")
+        keyboard = [
+            [InlineKeyboardButton(option, callback_data=f"quiz:{option}")]
+            for option in self.styles
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await self.send_group_chat(f"Let's play Exposed!\n\nSelect a difficulty to begin:", reply_markup=reply_markup)
 
         await self.populate_player_usernames()
-        self.draw_questions()
 
-        self.handlers.append(CommandHandler("begin", self.next_question))
+        #self.handlers.append(CommandHandler("begin", self.next_question))
+        self.handlers.append(CommandHandler("next", self.next_question))
         self.handlers.append(CallbackQueryHandler(self.handle_answer, pattern=r'^quiz:'))
         self.add_handlers()
 
@@ -68,9 +76,11 @@ class Exposed(Game):
         self.rounds = rounds
 
     def draw_questions(self):
-        self.questions_for_game = random.sample(exposed, self.rounds)
+        self.questions_for_game = random.sample(self.questionset, self.rounds)
 
     async def next_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not self.started:
+            return
         self.is_round_ongoing = True
         self.round_votes = []
         self.current_question = self.questions_for_game[self.current_round - 1]
@@ -99,6 +109,21 @@ class Exposed(Game):
         await self.context.job_queue.start()
 
     async def handle_answer(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        # Difficulty is not set -> this should set difficulty
+        if not self.started:
+            query = update.callback_query
+            await query.answer()
+            selected_option = query.data.split(':')[1]
+            if selected_option not in self.styles:
+                self.send_player_chat(update.effective_user.id, "Invalid difficulty option.")
+                return
+            else:
+                self.questionset = get_questionset(selected_option)
+                self.draw_questions()
+                self.started = True
+                await self.send_group_chat("Select /next to get the next question and start the game!")
+                return
+
         answering_player = update.effective_user
 
         logger.info(f"Answer by {answering_player.username}")

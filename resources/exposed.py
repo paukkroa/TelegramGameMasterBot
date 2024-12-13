@@ -1,4 +1,16 @@
-exposed = [
+# Gamestyles sorted from easiest to hardest/most controversial
+def get_questionset(style: str):
+    global questionsets
+    if style in questionsets.keys():
+        return questionsets[style]
+    else:
+        return None
+    
+def get_styles():
+    global questionsets
+    return questionsets.keys()
+
+controversial = [
     {"question": "Kuka todennäköisimmin juoksee Promenaden läpi pelkkä lakana päällään?"},
     {"question": "Kuka todennäköisimmin saa jättipotin laivan pelikoneesta?"},
     {"question": "Kuka todennäköisimmin menisi naimisiin rahasta?"},
@@ -71,3 +83,7 @@ exposed = [
     {"question": "Kuka todennäköisimmin jää Tukholmaan?"},
     {"question": "Kuka todennäköisimmin elää kaksoiselämää?"}
 ]
+
+questionsets = {
+    'controversial': controversial
+}
