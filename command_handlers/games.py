@@ -33,7 +33,29 @@ async def handle_number_game_start(update: Update, context: ContextTypes.DEFAULT
         logger.info(f"Adding player {player_id} to session {session_id}")
         db.add_player_to_session(sql_connection, session_id, player_id)
 
+    msg_words = update.message.text.split(' ') + ['']
+
+    if len(msg_words) > 3:
+        try:
+            min_number = int(msg_words[1])
+            max_number = int(msg_words[2])
+            if min_number < 1:
+                raise ValueError
+            if max_number < min_number:
+                raise ValueError
+        except ValueError:
+            await update.message.reply_text("Minimum number must be 1 or greater and maximum number must be greater than minimum number.") 
+            return
+        except:
+            await update.message.reply_text("Invalid numbers. Please provide valid integers in format '/numbergame <min> <max>'") 
+            return
+    else:
+        min_number = 1
+        max_number = 20
+
     game = GuessNumber(id=1, player_ids=waitlist.player_ids, update=update, context=context, session_id=session_id)
+    game.set_min_number(min_number)
+    game.set_max_number(max_number)
     logger.info(f'Guess number game start')
     await delete_waitlist_quiet(update, context)
     await game.start()
