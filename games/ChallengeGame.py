@@ -32,7 +32,7 @@ class ChallengeGame(Game):
         self.current_challenge_number = 1
 
     async def start(self):
-        await self.send_group_chat("Let's play random challenges!\n\nSend /next whenever you are ready for the next challenge")
+        await self.send_group_chat("💃 Let's play random challenges! 🕺\n\nSend /next whenever you are ready for the next challenge!")
         self.handlers.append(CommandHandler("next", self.get_next_challenge))
         self.add_handlers()
 
@@ -56,7 +56,7 @@ class ChallengeGame(Game):
         user_id = self.player_ids[user_index]
 
         username = await get_username_by_id(user_id, context)
-        await self.send_group_chat(f"Player: {username} \nChallenge: {challenge['name']}")
+        await self.send_group_chat(f"{username}, your challenge is:\n{challenge['name']}")
 
         if challenge['swigs'] > 0:
             drink_units = convert_swigs_to_units(challenge['swigs'])
@@ -73,7 +73,7 @@ class ChallengeGame(Game):
 
     async def end(self):
         """End game and remove command handlers"""
-        await self.send_group_chat("Congratulations, game ended.")
+        await self.send_group_chat("💃 Congratulations, challenge game ended! 🕺")
         self.remove_handlers()
 
         self.current_challenge_number = 1

@@ -45,17 +45,17 @@ class GuessNumber(Game):
         self.max_number = max_number
 
     async def start(self):
-        await self.send_group_chat(f"Let's play number game!")
+        await self.send_group_chat(f"🔢 Let's play number game! 🔢\n\n📩 Check your private messages!\n\nClosest guess wins!")
         self._draw_number()
 
         for player_id in self.player_ids:
-            response = await self.send_player_chat(player_id, f"Guess a number between {self.min_number} and {self.max_number}")
+            response = await self.send_player_chat(player_id, f"🔢 Guess a number between {self.min_number} and {self.max_number}")
             if response == Forbidden:
                 self.guesses[player_id] = self.min_number - 1 # Indicate false guess, exclude user
                 self.invalid_players.append(get_username_by_id(player_id, self.context))
 
         if self.invalid_players:
-            await self.send_group_chat(f"Could not send messages to {', '.join(self.invalid_players)}, these players are skipped.")
+            await self.send_group_chat(f"Could not send messages to {', '.join(self.invalid_players)}, these players are skipped ⏭️")
 
         # Poll for answers in private messages
         self.handlers.append(MessageHandler(
@@ -99,26 +99,25 @@ class GuessNumber(Game):
         if self.session_id:
             db.add_points_to_player(self.sql_connection, self.session_id, winner_id, 5)
 
-        message = (f"Winner is {winner_username}! Secret number was {self.target_number} "
-                   f"and they guessed {sorted_guesses[0][1]}.")
+        message = (f"🏆 Winner is {winner_username}! 🏆\n\nSecret number was {self.target_number} and they guessed {sorted_guesses[0][1]}.")
 
         if len(sorted_guesses) >= 2:
             second_id = sorted_guesses[1][0]
             second_username = await get_username_by_id(second_id, self.context)
-            message += f' Second was {second_username}.'
+            message += f'\nSecond was {second_username}.'
             if self.session_id:
                 db.add_points_to_player(self.sql_connection, self.session_id, second_id, 3)
 
         if len(sorted_guesses) >= 3:
             third_id = sorted_guesses[2][0]
             third_username = await get_username_by_id(third_id, self.context)
-            message += f' Third was {third_username}.'
+            message += f'\nThird was {third_username}.'
             if self.session_id:
                 db.add_points_to_player(self.sql_connection, self.session_id, third_id, 1)
 
         # AWARD DRINKS
 
-        message += f'\n\nDrinks awarded:\n'
+        message += f'\n\n🍻 Drinks awarded:\n'
 
         for player_id, guess in reversed_guesses:
             username = await get_username_by_id(player_id, self.context)
@@ -137,7 +136,7 @@ class GuessNumber(Game):
         await self.end()
 
     async def end(self):
-        await self.send_group_chat("Number game ended.")
+        await self.send_group_chat("🔢 Number game ended! 🔢")
         self.remove_handlers()
 
         for player_id in self.player_ids:

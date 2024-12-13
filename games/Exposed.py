@@ -63,7 +63,7 @@ class Exposed(Game):
             for option in self.styles
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await self.send_group_chat(f"Let's play Exposed!\n\nSelect a difficulty to begin:", reply_markup=reply_markup)
+        await self.send_group_chat(f"👀 Let's play Exposed! 👀\n\nSelect a difficulty to begin:", reply_markup=reply_markup)
 
         await self.populate_player_usernames()
 
@@ -85,7 +85,7 @@ class Exposed(Game):
         self.round_votes = []
         self.current_question = self.questions_for_game[self.current_round - 1]
 
-        round_message = f"Round {self.current_round}/{self.rounds}!\n\n{self.current_question['question']}"
+        round_message = f"🔁 Round {self.current_round}/{self.rounds}!\n\n⁉️{self.current_question['question']}"
 
         available_options = list(self.player_usernames.values())
         logger.info(f"Available options: {available_options}")
@@ -121,7 +121,7 @@ class Exposed(Game):
                 self.questionset = get_questionset(selected_option)
                 self.draw_questions()
                 self.started = True
-                await self.send_group_chat("Select /next to get the next question and start the game!")
+                await self.send_group_chat("Select /next to get the next question and start the game! 🎉")
                 return
 
         answering_player = update.effective_user
@@ -159,7 +159,7 @@ class Exposed(Game):
         return distribution
         
     async def timer_end(self, context):
-        await self.send_group_chat("Time's up!")
+        await self.send_group_chat("⏱️ Time's up! ⏱️")
         await self.end_round()
 
     async def end_round(self):
@@ -183,14 +183,14 @@ class Exposed(Game):
 
             await self.send_group_chat(result_message)
             if winner == 1:
-                await self.send_group_chat(f"{winner_name} you got the most votes, take three sips!")
+                await self.send_group_chat(f"{winner_name} you got the most votes, take three sips! 🍻")
             elif winner == 2:
-                await self.send_group_chat(f"No questions about the result, {winner_name}, take a shot!")
+                await self.send_group_chat(f"No questions about the result, {winner_name}, take a shot! 🥃")
             if winner != 0:
                 self.winners.append({winner_name: winner})
         
         else:
-            await self.send_group_chat("No one answered in time, everyone takes a sip!")
+            await self.send_group_chat("No one answered in time, everyone takes a sip! 🍻")
 
         self.current_round += 1
 
@@ -204,7 +204,7 @@ class Exposed(Game):
         await self.next_question(self.update, self.context)
 
     async def end(self):
-        await self.send_group_chat("Thanks for playing Exposed!")
+        await self.send_group_chat("👀 Thanks for playing Exposed! 👀")
         self.remove_handlers()
 
         for item in self.winners:

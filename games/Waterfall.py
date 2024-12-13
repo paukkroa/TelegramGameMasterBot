@@ -32,13 +32,13 @@ class Waterfall(Game):
     async def start(self):
         random_player_id = random.sample(self.player_ids, 1)[0]
         username = await get_username_by_id(random_player_id, self.context)
-        await self.send_group_chat(f"Let's play Waterfall! {username} starts. Send /done when you've played it.")
+        await self.send_group_chat(f"Let's play Waterfall! 🌊\n{username} starts. \n\nSend /done when you've played it 🍻")
 
         self.handlers.append(CommandHandler("done", self.end))
         self.add_handlers()
 
     async def end(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await self.send_group_chat("Waterfall ended.")
+        await self.send_group_chat("Waterfall ended! 🌊")
         self.remove_handlers()
 
         for player_id in self.player_ids:
