@@ -9,12 +9,19 @@ from ai_utils.llm_utils import SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT, S
 from utils.helpers import get_username_by_id, send_chat_safe
 from utils.logger import get_logger
 from utils.config import BOT_NAME, BOT_TG_ID, LLM_ENGINE, LLM_MODEL, LLM_ENABLED
-from ai_utils.engines import LLMService
+from ai_utils.engines import LLMService, BlankLLMService
 
 logger = get_logger(__name__)
 
 # Initialize the LLM service
-llm = LLMService(engine=LLM_ENGINE, model=LLM_MODEL)
+if LLM_ENABLED:
+    try:
+        llm = LLMService()
+    except ValueError as e:
+        logger.error(f"Error initializing LLM service, most likely model is not configured properly in environment variables: {e}")
+        llm = BlankLLMService()
+else:
+    llm = BlankLLMService() # Dummy service when LLM is disabled
 
 # TODO: Add a check to see if Ollama is available
 async def generic_message_llm_handler(update: Update, 
@@ -22,12 +29,6 @@ async def generic_message_llm_handler(update: Update,
                                       sql_connection: sqlite3.Connection, 
                                       bot_name: str = BOT_NAME, 
                                       bot_tg_id: int = BOT_TG_ID) -> None:
-    
-    # Check if ollama is available
-    if not llm.is_available():
-        logger.error("LLM service is not available")
-        await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message="Unfortunately my brain is not available right now. Please try again later.")
-        return
 
     msg = update.message.text
     sender_id = update.effective_user.id
@@ -48,6 +49,14 @@ async def generic_message_llm_handler(update: Update,
             logger.info(f"Added message from sender ({sender_id} to chat ({chat_id})")
             response = "My brain is not enabled right now. Please try again later."
             await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message=response)
+            return
+        
+        # --- Check if LLM service is available ---
+        if not llm.is_available():
+            logger.error("LLM service is not available")
+            add_message_to_chat_context(sql_connection, chat_id, sender_id, msg)
+            logger.info(f"Added message from sender ({sender_id} to chat context ({chat_id})")
+            await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message="Unfortunately my brain is not available right now. Please try again later.")
             return
 
         # --- Get context for the message ---

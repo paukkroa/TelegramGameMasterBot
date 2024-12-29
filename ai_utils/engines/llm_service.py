@@ -44,3 +44,13 @@ class LLMService():
             system_prompt = self.system_prompt
 
         return self.engine.chat(message, system_prompt)
+    
+class BlankLLMService():
+    def __init__(self):
+        pass
+    
+    def is_available(self) -> bool:
+        return False
+    
+    def chat(self, message, system_prompt) -> str:
+        return "My brain is not enabled right now. Please try again later."
