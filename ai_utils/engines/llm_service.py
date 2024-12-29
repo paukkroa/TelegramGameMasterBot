@@ -1,4 +1,5 @@
 from ai_utils.engines.ollama_service import OllamaService
+from ai_utils.engines.gemini_service import GeminiService
 from utils.config import LLM_ENGINE, LLM_MODEL
 from ai_utils.llm_utils import SYS_PROMPT_WITH_CONTEXT
 
@@ -18,6 +19,8 @@ class LLMService():
         """
         if engine == "ollama":
             return OllamaService(model=self.model)
+        elif engine == "gemini":
+            return GeminiService(model=self.model)
         else:
             raise ValueError("Engine not found")
         
