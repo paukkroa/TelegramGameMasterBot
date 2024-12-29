@@ -25,24 +25,16 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
 4. **Export bot variables**:
     ```bash
     export BOT_TOKEN='token'
-    export BOT_IT='id'
+    export BOT_ID='id'
     export BOT_NAME='bot_username'
     ```
-5. **(Optional) Configure Ollama to use LLM features**:
-   Set up Ollama according to their instructions (https://ollama.com).
-   Download a model, e.g.:
+5. **(Optional) Configure LLM features**:
    ```bash
-    ollama pull mistral
+    export ENABLE_LLM='True'
+    export LLM_ENGINE='ollama' (see supported APIs below)
+    export LLM_MODEL='mistral'
     ```
-   Choose your preffered model in llm_utils.py.
-   Run Ollama server:
-   ```bash
-    ollama serve
-    ```
-   We won't offer OpenAI API support due to data privacy concerns regarding the nature and use cases of the project.
    
-    
-
 ## Usage
 
 ## Commands
@@ -56,6 +48,18 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
 - `/force_end` - End a tournament.
 - `@botusername Message` - Chat with the bot. Gets the chat context in tournaments, otherwise gives zero-shot responses.
 - And other commands depending on the games
+
+## LLM APIs
+
+Supported APIs are:
+# - **Gemini**
+Make sure you have set GOOGLE_API_KEY in environment variables
+```bash
+export GOOGLE_API_KEY=''
+```
+# - **Ollama**
+Make sure Ollama is running on port 11434 (default Ollama port)
+
 
 ## Contributing
 
