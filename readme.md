@@ -52,12 +52,12 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
 ## LLM APIs
 
 Supported APIs are:
-# - **Gemini**
+### - **Gemini**
 Make sure you have set GOOGLE_API_KEY in environment variables
 ```bash
 export GOOGLE_API_KEY=''
 ```
-# - **Ollama**
+### - **Ollama**
 Make sure Ollama is running on port 11434 (default Ollama port)
 
 
