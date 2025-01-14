@@ -5,7 +5,7 @@ import db
 from utils.config import sql_connection, BOT_TG_ID, current_waitlists, ongoing_tournaments
 from utils.logger import get_logger
 from session import Tournament, Waitlist
-from general import start
+from command_handlers.general import start
 
 logger = get_logger(__name__)
 
