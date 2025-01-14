@@ -112,6 +112,21 @@ def get_latest_ongoing_session_by_chat(conn: sqlite3.Connection, chat_id: str) -
     except:
         return None
 
+def get_latest_session_by_chat(conn: sqlite3.Connection, chat_id: str) -> str:
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT session_id 
+    FROM D_SESSION
+    WHERE chat_id = ? 
+    ORDER BY chat_running_id DESC 
+    LIMIT 1
+    ''', (chat_id,))
+    try:
+        session_id = cursor.fetchone()
+        return session_id[0]
+    except:
+        return None
+
 def get_most_recent_session_by_player(conn: sqlite3.Connection, player_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute('''
