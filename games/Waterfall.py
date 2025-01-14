@@ -40,8 +40,10 @@ class Waterfall(Game):
 
     async def end(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         base_message = "Waterfall ended! 🌊"
-        if not in_game_message(self.update, self.context, self.sql_connection, message_type="end", game_name=self.name, base_message=base_message):
+        llm_success = await in_game_message(self.update, self.context, self.sql_connection, message_type="end", game_name=self.name, base_message=base_message)
+        if not llm_success:
             await self.send_group_chat(base_message)
+
         self.remove_handlers()
 
         for player_id in self.player_ids:

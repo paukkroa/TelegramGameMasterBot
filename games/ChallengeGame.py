@@ -75,7 +75,8 @@ class ChallengeGame(Game):
     async def end(self):
         """End game and remove command handlers"""
         base_message = "💃 Congratulations, challenge game ended! 🕺"
-        if not in_game_message(self.update, self.context, self.sql_connection, message_type="end", game_name=self.name, base_message=base_message):
+        llm_success = in_game_message(self.update, self.context, self.sql_connection, message_type="end", game_name=self.name, base_message=base_message)
+        if not llm_success:
             await self.send_group_chat(base_message)
 
         self.remove_handlers()

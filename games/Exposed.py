@@ -206,9 +206,10 @@ class Exposed(Game):
 
     async def end(self):
         base_message = "👀 Thanks for playing Exposed! 👀"
-        if not in_game_message(self.update, self.context, self.sql_connection, message_type="end", game_name=self.name, base_message=base_message):
+        llm_success = await in_game_message(self.update, self.context, self.sql_connection, message_type="end", game_name=self.name, base_message=base_message)
+        if not llm_success:
             await self.send_group_chat(base_message)
-            
+
         self.remove_handlers()
 
         for item in self.winners:
