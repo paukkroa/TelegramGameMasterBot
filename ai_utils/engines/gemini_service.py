@@ -1,5 +1,6 @@
 import google.generativeai as genai
 import os
+import PIL.Image
 
 class GeminiService():
     def __init__(self,
@@ -7,6 +8,13 @@ class GeminiService():
                  ):
         self.engine = genai
         self.model = model
+        self.generation_config = {
+            "temperature": 1.45,
+            "top_p": 0.9,
+            "top_k": 40,
+            "max_output_tokens": 8192,
+            "response_mime_type": "text/plain",
+        }
 
     def _is_available(self) -> bool:
         """
@@ -24,17 +32,27 @@ class GeminiService():
         """
         if not self._is_available():
             return "Unfortunately my brain is not available right now. Please try again later."
-        
-        generation_config = {
-            "temperature": 1.45,
-            "top_p": 0.9,
-            "top_k": 40,
-            "max_output_tokens": 8192,
-            "response_mime_type": "text/plain",
-        }
 
         model = genai.GenerativeModel(self.model,
-                                      generation_config=generation_config,
+                                      generation_config=self.generation_config,
                                       system_instruction=[system_prompt])
         response = model.generate_content(message)
+        return response.candidates[0].content.parts[0].text
+    
+    def chat_with_files(self, message, system_prompt, files) -> str:
+        """ 
+        Respond to a message with files
+        """
+        if not self._is_available():
+            return "Unfortunately my brain is not available right now. Please try again later."
+        
+        prompt = [message]
+        for file in files:
+            image = PIL.Image.open(file)
+            prompt.append(image)
+
+        model = genai.GenerativeModel(self.model,
+                                      generation_config=self.generation_config,
+                                      system_instruction=[system_prompt])
+        response = model.generate_content(prompt)
         return response.candidates[0].content.parts[0].text
