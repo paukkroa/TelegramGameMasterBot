@@ -81,7 +81,7 @@ async def handle_join_waitlist(update: Update, context: ContextTypes.DEFAULT_TYP
         return
 
     # Register player if not already registered
-    start(update, context, quiet=True)
+    await start(update, context, quiet=True)
 
     if chat_id in current_waitlists.keys():
         waitlist = current_waitlists[chat_id]
