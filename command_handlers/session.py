@@ -100,6 +100,33 @@ async def handle_join_waitlist(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.info(f"Player {user.id} already in waitlist in chat {chat_id}")
         logger.info(f"Current waitlist: {waitlist.player_ids}")
 
+async def handle_leave_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Remove player from waitlist when they send /leave """
+    user = update.effective_user
+    chat_id = update.effective_chat.id
+
+    if update.effective_chat.type not in ("group", "supergroup"):
+        await update.message.reply_text("This command can only be used in a group.")
+        return
+    
+    if chat_id in current_waitlists.keys():
+        waitlist = current_waitlists[chat_id]
+        logger.info(f"Waitlist exists for chat {chat_id}: {waitlist}")
+    else:
+        logger.info(f"No waitlist for chat {chat_id} exists")
+        await update.message.reply_text("No waitlist exists for the chat")
+        return
+
+    if waitlist.remove_player(user.id):
+        logger.info(f"Player {user.id} removed from waitlist in chat {chat_id}")
+        logger.info(f"Current waitlist: {waitlist.player_ids}")
+        await update.message.reply_text("Left session succesfully")
+    else:
+        await update.message.reply_text("You are not in the session")
+        logger.info(f"Player {user.id} not in waitlist in chat {chat_id}")
+        logger.info(f"Current waitlist: {waitlist.player_ids}")
+
+
 
 async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
