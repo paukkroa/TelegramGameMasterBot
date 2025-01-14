@@ -11,7 +11,8 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
 ## Example Bot
 Try this one out with **@partygamemasterbot** on Telegram! 
 
-(Please note that the message data is stored on the server. Images are not stored.)
+!! Please note that the message data is stored on the server. Images are not stored.
+LLM-functionalities might be limited due to usage limits
 
 ## Installation
 
