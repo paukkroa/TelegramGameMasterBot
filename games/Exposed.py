@@ -11,6 +11,7 @@ from games.Game import Game
 from utils.logger import get_logger
 from utils.helpers import get_username_by_id, convert_swigs_to_units, convert_shots_to_units
 from resources.exposed import get_styles, get_questionset
+from ai_utils.llm import in_game_message
 
 logger = get_logger(__name__)
 
@@ -204,7 +205,10 @@ class Exposed(Game):
         await self.next_question(self.update, self.context)
 
     async def end(self):
-        await self.send_group_chat("👀 Thanks for playing Exposed! 👀")
+        base_message = "👀 Thanks for playing Exposed! 👀"
+        if not in_game_message(self.update, self.context, self.sql_connection, message_type="end", game_name=self.name, base_message=base_message):
+            await self.send_group_chat(base_message)
+            
         self.remove_handlers()
 
         for item in self.winners:

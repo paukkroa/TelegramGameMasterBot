@@ -9,6 +9,7 @@ from games.Game import Game
 from utils.logger import get_logger
 from utils.helpers import get_username_by_id
 from resources.questions import questions
+from ai_utils.llm import in_game_message
 
 logger = get_logger(__name__)
 
@@ -262,6 +263,7 @@ class TeamQuizV2(Game):
         results_msg = ranking_msg + "\n\n" + drink_msg
 
         await self.send_group_chat(results_msg)
+        in_game_message(self.update, self.context, self.sql_connection, message_type="teamquiz_end", game_name=self.name, base_message=results_msg)
 
         self.num_of_teams = 0
         self.current_round = 1
