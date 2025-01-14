@@ -38,13 +38,14 @@ def add_player_to_chat(conn: sqlite3.Connection, chat_id: str, player_id: int) -
     cursor.execute('SELECT 1 FROM R_CHAT_MEMBERS WHERE chat_id = ? AND player_id = ?', (chat_id, player_id))
     if cursor.fetchone() is not None:
         logger.info(f"Player with id {player_id} already exists in chat {chat_id}.")
-        return
+        return False
 
     # Insert the player into the chat
     cursor.execute('''
     INSERT INTO R_CHAT_MEMBERS (chat_id, player_id) VALUES (?, ?)
     ''', (chat_id, player_id))
     conn.commit()
+    return True
 
 # TODO: Use hashing for player_id and chat_id for improved security
 def remove_player_from_chat(conn: sqlite3.Connection, chat_id: str, player_id: int) -> None:
