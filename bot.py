@@ -70,6 +70,11 @@ def main() -> None:
         filters.TEXT & ~filters.COMMAND & ~filters.ChatType.PRIVATE, handlers.handle_generic_message)
     )
 
+    # Handle messages with attachments in groups
+    application.add_handler(MessageHandler(
+        filters.PHOTO & ~filters.COMMAND & ~filters.ChatType.PRIVATE, handlers.handle_generic_image_message)
+    )
+
     # Option handlers
     application.add_handler(CallbackQueryHandler(handle_ranking_callback, pattern=r'^ranking:'))
     application.add_handler(CallbackQueryHandler(handle_stats_callback, pattern=r'^stats:'))

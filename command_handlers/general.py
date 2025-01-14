@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes
 
 import db
 
-from ai_utils.llm import generic_message_llm_handler
+from ai_utils.llm import generic_message_llm_handler, generic_image_message
 from utils.config import sql_connection, BOT_TG_ID, BOT_NAME
 from utils.logger import get_logger
 
@@ -73,6 +73,9 @@ async def list_all_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 async def handle_generic_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await generic_message_llm_handler(update, context, sql_connection)
+
+async def handle_generic_image_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await generic_image_message(update, context, sql_connection)
 
 async def ai_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help-ai is issued."""

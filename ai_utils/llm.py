@@ -1,6 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 import sqlite3
+import PIL.Image
+import os
 
 from db.session_queries import *
 from db.settings_queries import get_chat_settings
@@ -195,3 +197,75 @@ async def in_game_message(update: Update,
     await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message=llm_response)
     return True
         
+
+async def generic_image_message(update: Update, 
+                               tg_context: ContextTypes.DEFAULT_TYPE, 
+                               sql_connection: sqlite3.Connection, 
+                               bot_name: str = BOT_NAME,
+                               bot_tg_id: int = BOT_TG_ID) -> None:
+    """
+    Handle image messages sent in the chat.
+
+    Args:
+        update (Update): Telegram update object
+        tg_context (ContextTypes.DEFAULT_TYPE): Telegram context object
+        sql_connection (sqlite3.Connection): SQLite connection object
+        bot_tg_id (int, optional): Telegram ID of the bot. Defaults to BOT_TG_ID.
+    """
+
+    msg = update.message.caption
+    sender_id = update.effective_user.id
+    sender_name = await get_username_by_id(sender_id, tg_context)
+    chat_id = update.effective_chat.id
+    session_id = get_latest_ongoing_session_by_chat(sql_connection, chat_id)
+    chat_settings = get_chat_settings(sql_connection, chat_id)   
+
+    # Bot is mentioned, reply to the text
+    if f'@{bot_name}' in msg:
+        # Remove bot mention from the message
+        msg = msg.replace(f'@{bot_name}', '')
+
+        # --- Check if llm is available ---
+        if not _check_llm_health():
+            add_message_to_chat_context(sql_connection, chat_id, sender_id, msg)
+            logger.info(f"Added message from sender ({sender_id} to chat ({chat_id})")
+            response = "My brain is not enabled right now. Please try again later."
+            await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message=response)
+            return
+
+        # --- Download image ---
+        images = []
+        file_path = await file_downloader(update, tg_context)
+        images.append(file_path)
+
+        # --- Get context for the message ---
+        context, sys_prompt = _get_context_and_sys_prompt(chat_settings, chat_id, session_id, sql_connection)
+
+        # --- Create prompt ---
+        if context is None:
+            content = f"User name: {sender_name}, User message: {msg}"
+        else:
+            content = f"User name: {sender_name}, User message: {msg}, Context: {context}"
+        
+        # --- Get response from the LLM model ---
+        llm.set_sys_prompt(sys_prompt)
+        llm_response = llm.chat(content, files=images)
+
+        # --- Clean images from disk ---
+        for image in images:
+            os.remove(image)
+        
+        # --- Add messages to the chat context ---
+        add_message_to_chat_context(sql_connection, chat_id, sender_id, msg)
+        logger.info(f"Added message from sender ({sender_id} to chat context ({chat_id})")
+        add_message_to_chat_context(sql_connection, chat_id, bot_tg_id, llm_response)
+        logger.info(f"Added message from bot ({bot_tg_id} to chat context ({chat_id})")
+
+        # --- Send response to the chat ---
+        await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message=llm_response)
+
+    # Bot is not mentioned, add message to context
+    else: 
+        # Add user message to the chat context
+        add_message_to_chat_context(sql_connection, chat_id, sender_id, msg)
+        logger.info(f"Added message from sender ({sender_id} to chat ({chat_id})")
