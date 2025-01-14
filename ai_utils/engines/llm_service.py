@@ -36,14 +36,17 @@ class LLMService():
         """
         return self.engine._is_available()
     
-    def chat(self, message, system_prompt = None) -> str:
+    def chat(self, message, system_prompt = None, files=None) -> str:
         """ 
         Respond to a message generically
         """
         if system_prompt is None:
             system_prompt = self.system_prompt
 
-        return self.engine.chat(message, system_prompt)
+        if files is None:
+            return self.engine.chat(message, system_prompt)
+        else:
+            return self.engine.chat_with_files(message, system_prompt, files)
     
 class BlankLLMService():
     def __init__(self):
