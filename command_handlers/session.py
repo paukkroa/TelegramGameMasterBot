@@ -5,6 +5,7 @@ import db
 from utils.config import sql_connection, BOT_TG_ID, current_waitlists, ongoing_tournaments
 from utils.logger import get_logger
 from session import Tournament, Waitlist
+from general import start
 
 logger = get_logger(__name__)
 
@@ -74,6 +75,13 @@ async def handle_join_waitlist(update: Update, context: ContextTypes.DEFAULT_TYP
     """Add player into waitlist when they send /join """
     user = update.effective_user
     chat_id = update.effective_chat.id
+
+    if update.effective_chat.type not in ("group", "supergroup"):
+        await update.message.reply_text("This command can only be used in a group.")
+        return
+
+    # Register player if not already registered
+    start(update, context, quiet=True)
 
     if chat_id in current_waitlists.keys():
         waitlist = current_waitlists[chat_id]

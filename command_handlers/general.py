@@ -5,8 +5,11 @@ import db
 
 from ai_utils.llm import generic_message_llm_handler
 from utils.config import sql_connection, BOT_TG_ID, BOT_NAME
+from utils.logger import get_logger
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+logger = get_logger(__name__)
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, quiet = False) -> None:
     """
     Create the chat and user in the database when the bot is started.
     Add the bot to the chat as well.
@@ -18,17 +21,30 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # These functions have unique constraints so they will not add duplicates
     db.create_chat(sql_connection, chat_id, chat_name)
     db.insert_player(sql_connection, user.id, user.username)
-    db.add_player_to_chat(sql_connection, chat_id, user.id)
+    flag = db.add_player_to_chat(sql_connection, chat_id, user.id)
     db.add_player_to_chat(sql_connection, chat_id, BOT_TG_ID)
 
-    if update.message.chat.type != 'group':
-        message = rf"Hi {user.mention_html()}! Are you ready to start playing? Add me to a group chat with your friends and press /start there. Press /help for more information."
+    if not quiet:
+        # flag = True == player was added to chat succesfully
+        if flag:
+            if update.message.chat.type != 'group':
+                message = rf"Hi {user.mention_html()}! Get back to the group chat to start the party!"
+            else:
+                message = rf"Welcome {user.mention_html()}!"
+            await update.message.reply_html(
+                    message,
+                    reply_markup=ForceReply(selective=True),
+                )
+        else:
+            await update.message.reply_html(
+                rf"{user.mention_html()}, you are already registered.",
+                reply_markup=ForceReply(selective=True),
+            )
     else:
-        message = rf"Hi {user.mention_html()}! Welcome to the group! Make sure all your friends here press /start as well. Press /help for more information."
-    await update.message.reply_html(
-            message,
-            reply_markup=ForceReply(selective=True),
-        )
+        if flag:
+            logger.info(f"User {user.id} added to {chat_id} quietly.")
+        else:
+            logger.info(f"User {user.id} has already registered to chat {chat_id}.")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
