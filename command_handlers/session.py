@@ -19,6 +19,10 @@ async def start_tournament(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text(
             "No players are on the waitlist, cannot start tournament. Press /join to join the waitlist.")
         return
+    
+    if len(waitlist.player_ids) < 2:
+        await update.message.reply_text("At least 2 players are needed to start a tournament.")
+        return
 
     session_id = db.start_session(sql_connection, chat_id)
     logger.info(f"Session {session_id} started for chat {chat_id}")
