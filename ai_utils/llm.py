@@ -187,6 +187,6 @@ async def in_game_message(update: Update,
 
     # --- Send response to the chat ---
     await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message=llm_response)
-
+    return True
         
     
