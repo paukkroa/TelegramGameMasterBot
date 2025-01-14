@@ -42,9 +42,8 @@ async def send_chat_safe(context: ContextTypes.DEFAULT_TYPE, chat_id: int, messa
         logger.info(e)
         return e
     
-async def file_downloader(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    # Download file
-    new_file = await update.message.effective_attachment[-1].get_file()
-    file = await new_file.download_to_drive()
-    
-    return file
+async def file_downloader(update: Update, context: ContextTypes.DEFAULT_TYPE) -> list[str]:
+    photo = update.message.effective_attachment[-1]
+    new_file = await photo.get_file()
+    file_path = await new_file.download_to_drive()
+    return file_path

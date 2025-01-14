@@ -220,6 +220,11 @@ async def generic_image_message(update: Update,
     session_id = get_latest_ongoing_session_by_chat(sql_connection, chat_id)
     chat_settings = get_chat_settings(sql_connection, chat_id)   
 
+    # Skip image messages without caption
+    if msg is None:
+        logger.info(f"Skipping image message without caption from sender ({sender_id}) in chat ({chat_id})")
+        return
+    
     # Bot is mentioned, reply to the text
     if f'@{bot_name}' in msg:
         # Remove bot mention from the message
@@ -235,8 +240,8 @@ async def generic_image_message(update: Update,
 
         # --- Download image ---
         images = []
-        file_path = await file_downloader(update, tg_context)
-        images.append(file_path)
+        image = await file_downloader(update, tg_context)
+        images.append(image)
 
         # --- Get context for the message ---
         context, sys_prompt = _get_context_and_sys_prompt(chat_settings, chat_id, session_id, sql_connection)
