@@ -8,7 +8,7 @@ def get_questionset(style: str):
     
 def get_styles():
     global questionsets
-    return questionsets.keys()
+    return list(questionsets.keys())
 
 controversial = [
     {"question": "Kuka todennäköisimmin juoksee Promenaden läpi pelkkä lakana päällään?"},
