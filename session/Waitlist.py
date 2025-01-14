@@ -35,3 +35,11 @@ class Waitlist:
             message += f"\n{username}"
 
         await update.message.reply_text(message)
+
+    async def get_players(self, context: ContextTypes.DEFAULT_TYPE) -> list:
+        usernames = {}
+        for id in self.player_ids:
+            username = await get_username_by_id(id, context)
+            usernames[username] = id
+
+        return usernames
