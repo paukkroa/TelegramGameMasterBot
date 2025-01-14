@@ -1,7 +1,5 @@
 import random
-import time
 
-import setuptools
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 from typing import Callable
