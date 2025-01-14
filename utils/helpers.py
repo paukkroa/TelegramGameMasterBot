@@ -49,4 +49,5 @@ async def photo_downloader(photo) -> list[str]:
     
 async def file_downloader(update: Update, context: ContextTypes.DEFAULT_TYPE) -> list[str]:
     photo = update.message.effective_attachment[-1]
-    return photo_downloader(photo)
+    file = await photo_downloader(photo)
+    return file
