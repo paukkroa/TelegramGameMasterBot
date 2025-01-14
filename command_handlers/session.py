@@ -126,7 +126,41 @@ async def handle_leave_waitlist(update: Update, context: ContextTypes.DEFAULT_TY
         logger.info(f"Player {user.id} not in waitlist in chat {chat_id}")
         logger.info(f"Current waitlist: {waitlist.player_ids}")
 
+async def handle_remove_player_from_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Remove player from waitlist when they send /remove """
+    chat_id = update.effective_chat.id
+    msg_words = update.message.text.split(' ')
+    if len(msg_words) < 2:
+        await update.message.reply_text("Please specify the username to remove")
+        return
 
+    # Get waitlist
+    if chat_id in current_waitlists.keys():
+        waitlist = current_waitlists[chat_id]
+        logger.info(f"Waitlist exists for chat {chat_id}: {waitlist}")
+    else:
+        logger.info(f"No waitlist for chat {chat_id} exists")
+        await update.message.reply_text("No waitlist exists for the chat")
+        return
+    
+    # Get player id
+    usernames = await waitlist.get_players(context)
+    username = msg_words[1].replace("@", "")
+    if username in usernames:
+        user_id = usernames[username]
+    else:
+        await update.message.reply_text("Player not in the waitlist")
+        return
+
+    # Remove player from waitlist
+    if waitlist.remove_player(user_id):
+        logger.info(f"Player {user_id} removed from waitlist in chat {chat_id}")
+        logger.info(f"Current waitlist: {waitlist.player_ids}")
+        await update.message.reply_text("Player removed succesfully")
+    else:
+        await update.message.reply_text("Player not in the session")
+        logger.info(f"Player {user_id} not in waitlist in chat {chat_id}")
+        logger.info(f"Current waitlist: {waitlist.player_ids}")
 
 async def print_waitlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
