@@ -24,8 +24,17 @@ class GeminiService():
         """
         if not self._is_available():
             return "Unfortunately my brain is not available right now. Please try again later."
+        
+        generation_config = {
+            "temperature": 1.45,
+            "top_p": 0.9,
+            "top_k": 40,
+            "max_output_tokens": 8192,
+            "response_mime_type": "text/plain",
+        }
 
         model = genai.GenerativeModel(self.model,
-                                       system_instruction=[system_prompt])
+                                      generation_config=generation_config,
+                                      system_instruction=[system_prompt])
         response = model.generate_content(message)
         return response.candidates[0].content.parts[0].text

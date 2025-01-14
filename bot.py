@@ -45,6 +45,8 @@ def main() -> None:
 
     # Tournaments / sessions
     application.add_handler(CommandHandler("join", handlers.handle_join_waitlist))
+    application.add_handler(CommandHandler("leave", handlers.handle_leave_waitlist))
+    application.add_handler(CommandHandler("remove", handlers.handle_remove_player_from_waitlist))
     application.add_handler(CommandHandler("waitlist", handlers.print_waitlist))
     application.add_handler(CommandHandler("clear", handlers.delete_waitlist))
     application.add_handler(CommandHandler("tournament", handlers.start_tournament))

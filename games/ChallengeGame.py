@@ -8,6 +8,7 @@ from games.Game import Game
 from resources.challenges import all_challenges_by_level
 from utils.logger import get_logger
 from utils.helpers import get_username_by_id, convert_swigs_to_units, convert_shots_to_units
+from ai_utils.llm import in_game_message
 
 logger = get_logger(__name__)
 
@@ -73,7 +74,11 @@ class ChallengeGame(Game):
 
     async def end(self):
         """End game and remove command handlers"""
-        await self.send_group_chat("💃 Congratulations, challenge game ended! 🕺")
+        base_message = "💃 Congratulations, challenge game ended! 🕺"
+        llm_success = in_game_message(self.update, self.context, self.sql_connection, message_type="end", game_name=self.name, base_message=base_message)
+        if not llm_success:
+            await self.send_group_chat(base_message)
+
         self.remove_handlers()
 
         self.current_challenge_number = 1

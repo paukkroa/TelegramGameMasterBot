@@ -7,6 +7,7 @@ import db
 from utils.helpers import get_username_by_id
 from utils.logger import get_logger
 from games.Game import Game
+from ai_utils.llm import in_game_message
 
 logger = get_logger(__name__)
 
@@ -38,7 +39,11 @@ class Waterfall(Game):
         self.add_handlers()
 
     async def end(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await self.send_group_chat("Waterfall ended! 🌊")
+        base_message = "Waterfall ended! 🌊"
+        llm_success = await in_game_message(self.update, self.context, self.sql_connection, message_type="end", game_name=self.name, base_message=base_message)
+        if not llm_success:
+            await self.send_group_chat(base_message)
+
         self.remove_handlers()
 
         for player_id in self.player_ids:
