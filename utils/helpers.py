@@ -2,6 +2,7 @@ from telegram.error import BadRequest
 from telegram.error import RetryAfter, Forbidden
 import asyncio
 from telegram.ext import ContextTypes
+from telegram import Update
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -40,3 +41,13 @@ async def send_chat_safe(context: ContextTypes.DEFAULT_TYPE, chat_id: int, messa
     except BadRequest as e:
         logger.info(e)
         return e
+    
+async def photo_downloader(photo) -> list[str]:
+    new_file = await photo.get_file()
+    file_path = await new_file.download_to_drive()
+    return file_path
+    
+async def file_downloader(update: Update, context: ContextTypes.DEFAULT_TYPE) -> list[str]:
+    photo = update.message.effective_attachment[-1]
+    file = await photo_downloader(photo)
+    return file

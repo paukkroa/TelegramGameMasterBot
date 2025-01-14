@@ -40,3 +40,6 @@ class OllamaService():
         ])
 
         return response['message']['content']
+
+    def chat_with_files(self, message, system_prompt, files) -> str:
+        return "Unfortunately I can't see images yet. Please try again later."

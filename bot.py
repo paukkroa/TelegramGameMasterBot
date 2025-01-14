@@ -67,7 +67,20 @@ def main() -> None:
 
     # Handle generic group messages and respond with LLM
     application.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND & ~filters.ChatType.PRIVATE, handlers.handle_generic_message)
+        filters.TEXT & ~filters.COMMAND & ~filters.ChatType.PRIVATE & ~filters.REPLY,
+        handlers.handle_generic_message)
+    )
+
+    # Handle messages with images in groups
+    application.add_handler(MessageHandler(
+        filters.PHOTO & ~filters.COMMAND & ~filters.ChatType.PRIVATE, 
+        handlers.handle_generic_image_message)
+    )
+
+    # Handle reply messages in group (for example user wants a response on a picture sent earlier)
+    application.add_handler(MessageHandler(
+        filters.REPLY & ~filters.COMMAND & ~filters.ChatType.PRIVATE,
+        handlers.handle_reply_message)
     )
 
     # Option handlers
