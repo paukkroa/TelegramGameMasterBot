@@ -6,7 +6,7 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
 
 - **Game Management**: Create custom games to play with your friends
 - **Play Tournaments With Your Friends**: Play Tournaments consisting of multiple minigames. Get player based scores and see who comes out on top!
-- **LLM Notifications**: An LLM-powered game master guides you through the games, follows the tournaments and gives comments when mentioned in chat
+- **LLM Capabilities**: An LLM-powered game master guides you through the games, follows the tournaments and gives comments when mentioned in chat. Now with vision capabilities!
 
 ## Installation
 
@@ -42,6 +42,8 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
 - `/start` - Initialize the bot in a chat. Needs to be run privately and in the game group by each user.
 - `/help` - Get help.
 - `/join` - Join a Tournament waitlist. Games are based on the people on the waitlist.
+- `/leave` - Leave a Tournament waitlist.
+- `/remove @username` - Remove a player from a waitlist.
 - `/waitlist` - See players currently on the Tournament waitlist.
 - `/players` - List registered players of the current chat.
 - `/tournament (n)` - Start a tournament of n games. Default is 5 games.
@@ -49,7 +51,7 @@ Welcome to the Telegram Game Master Bot project! This bot is designed to help ma
 - `@botusername Message` - Chat with the bot. Gets the chat context in tournaments, otherwise gives zero-shot responses.
 - And other commands depending on the games
 
-## LLM APIs
+## LLM functionalities
 
 Supported APIs are:
 ### - **Gemini**
@@ -58,7 +60,12 @@ Make sure you have set GOOGLE_API_KEY in environment variables
 export GOOGLE_API_KEY=''
 ```
 ### - **Ollama**
-Make sure Ollama is running on port 11434 (default Ollama port)
+Make sure Ollama is running at localhost:11434 (default Ollama port)
+
+## Vision capabilities
+The bot now supports vision capabilities! (Gemini only as of now)
+Send an image to the bot and tag it to get an response.
+You can also reply to previous messages to get a response from them!
 
 
 ## Contributing
