@@ -60,6 +60,18 @@ def _get_context_and_sys_prompt(chat_settings, chat_id, session_id, sql_connecti
 
     return context, sys_prompt
 
+def _check_llm_health():
+    # --- Check if LLM is enabled ---
+    if not LLM_ENABLED:
+        logger.warning(f"LLM is disabled in environment variables, adding message to session context")
+        return False
+    
+    # --- Check if LLM service is available ---
+    if not llm.is_available():
+        logger.error("LLM service is not available")
+        return False
+    return True
+
 async def generic_message_llm_handler(update: Update, 
                                       tg_context: ContextTypes.DEFAULT_TYPE, 
                                       sql_connection: sqlite3.Connection, 
@@ -88,21 +100,12 @@ async def generic_message_llm_handler(update: Update,
         # Remove bot mention from the message
         msg = msg.replace(f'@{bot_name}', '')
 
-        # --- Check if llm is enabled ---
-        if not LLM_ENABLED:
-            logger.warning(f"LLM is disabled in environment variables, adding message to session context")
+        # --- Check if llm is available ---
+        if not _check_llm_health():
             add_message_to_chat_context(sql_connection, chat_id, sender_id, msg)
             logger.info(f"Added message from sender ({sender_id} to chat ({chat_id})")
             response = "My brain is not enabled right now. Please try again later."
             await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message=response)
-            return
-        
-        # --- Check if LLM service is available ---
-        if not llm.is_available():
-            logger.error("LLM service is not available")
-            add_message_to_chat_context(sql_connection, chat_id, sender_id, msg)
-            logger.info(f"Added message from sender ({sender_id} to chat context ({chat_id})")
-            await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message="Unfortunately my brain is not available right now. Please try again later.")
             return
 
         # --- Get context and sys_prompt for the message ---
