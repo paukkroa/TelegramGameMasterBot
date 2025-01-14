@@ -5,7 +5,7 @@ import sqlite3
 from db.session_queries import *
 from db.settings_queries import get_chat_settings
 from ai_utils.llm_utils import SYS_PROMPT_WITH_CONTEXT, SYS_PROMPT_NO_CONTEXT, SYS_PROMPT_WITH_CONTEXT_SESSION_ONLY, SYS_PROMPT_GAME_END, SYS_PROMPT_TEAM_QUIZ_END
-from utils.helpers import get_username_by_id, send_chat_safe
+from utils.helpers import get_username_by_id, send_chat_safe, file_downloader
 from utils.logger import get_logger
 from utils.config import BOT_NAME, BOT_TG_ID, LLM_ENGINE, LLM_MODEL, LLM_ENABLED
 from ai_utils.engines import LLMService, BlankLLMService
@@ -21,6 +21,44 @@ if LLM_ENABLED:
         llm = BlankLLMService()
 else:
     llm = BlankLLMService() # Dummy service when LLM is disabled
+
+def _get_context_and_sys_prompt(chat_settings, chat_id, session_id, sql_connection):
+    # Retrieve all of the message history
+    if chat_settings['context_window_type'] == 'all':
+        context = get_all_chat_messages(sql_connection, chat_id)
+        logger.info(f"Retrieved all chat messages for chat {chat_id}")
+        sys_prompt = SYS_PROMPT_WITH_CONTEXT
+
+    # Retrieve messages with a rolling time window
+    elif chat_settings['context_window_type'] == 'rolling':
+        context = get_chat_messages_from_rolling_time_window(sql_connection, chat_id)
+        logger.info(f"Retrieved rolling context for chat {chat_id}")
+        sys_prompt = SYS_PROMPT_WITH_CONTEXT
+        
+    # Retrieve messages with a static time window
+    elif chat_settings['context_window_type'] == 'static':
+        context = get_chat_messages_within_time_window(sql_connection, chat_id)
+        logger.info(f"Retrieved static context messages for chat {chat_id}")
+        sys_prompt = SYS_PROMPT_WITH_CONTEXT
+
+    # Retrieve n-last messages
+    elif chat_settings['context_window_type'] == 'n-messages':
+        context = get_last_n_messages(sql_connection, chat_id)
+        logger.info(f"Retrieved last n-messages (n: {chat_settings['n_messages']}) for chat {chat_id}")
+        sys_prompt = SYS_PROMPT_WITH_CONTEXT
+
+    # Retrieve messages from the session if it is ongoing
+    elif chat_settings['context_window_type'] == 'session':
+        context = get_session_messages(sql_connection, session_id)
+        logger.info(f"Retrieved session {session_id} context for chat {chat_id}")
+        sys_prompt = SYS_PROMPT_WITH_CONTEXT_SESSION_ONLY
+
+    else:
+        logger.info(f"Message in chat {chat_id} has no context window, prompting with zero-shot.")
+        context = None
+        sys_prompt = SYS_PROMPT_NO_CONTEXT
+
+    return context, sys_prompt
 
 async def generic_message_llm_handler(update: Update, 
                                       tg_context: ContextTypes.DEFAULT_TYPE, 
@@ -67,42 +105,8 @@ async def generic_message_llm_handler(update: Update,
             await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message="Unfortunately my brain is not available right now. Please try again later.")
             return
 
-        # --- Get context for the message ---
-
-        # Retrieve all of the message history
-        if chat_settings['context_window_type'] == 'all':
-            context = get_all_chat_messages(sql_connection, chat_id)
-            logger.info(f"Retrieved all chat messages for chat {chat_id}")
-            sys_prompt = SYS_PROMPT_WITH_CONTEXT
-
-        # Retrieve messages with a rolling time window
-        elif chat_settings['context_window_type'] == 'rolling':
-            context = get_chat_messages_from_rolling_time_window(sql_connection, chat_id)
-            logger.info(f"Retrieved rolling context for chat {chat_id}")
-            sys_prompt = SYS_PROMPT_WITH_CONTEXT
-            
-        # Retrieve messages with a static time window
-        elif chat_settings['context_window_type'] == 'static':
-            context = get_chat_messages_within_time_window(sql_connection, chat_id)
-            logger.info(f"Retrieved static context messages for chat {chat_id}")
-            sys_prompt = SYS_PROMPT_WITH_CONTEXT
-
-        # Retrieve n-last messages
-        elif chat_settings['context_window_type'] == 'n-messages':
-            context = get_last_n_messages(sql_connection, chat_id)
-            logger.info(f"Retrieved last n-messages (n: {chat_settings['n_messages']}) for chat {chat_id}")
-            sys_prompt = SYS_PROMPT_WITH_CONTEXT
-
-        # Retrieve messages from the session if it is ongoing
-        elif chat_settings['context_window_type'] == 'session':
-            context = get_session_messages(sql_connection, session_id)
-            logger.info(f"Retrieved session {session_id} context for chat {chat_id}")
-            sys_prompt = SYS_PROMPT_WITH_CONTEXT_SESSION_ONLY
-
-        else:
-            logger.info(f"Message in chat {chat_id} has no context window, prompting with zero-shot.")
-            context = None
-            sys_prompt = SYS_PROMPT_NO_CONTEXT
+        # --- Get context and sys_prompt for the message ---
+        context, sys_prompt = _get_context_and_sys_prompt(chat_settings, chat_id, session_id, sql_connection)
 
         # --- Create prompt ---
         if context is None:
@@ -188,4 +192,3 @@ async def in_game_message(update: Update,
     await send_chat_safe(tg_context, chat_id=update.effective_chat.id, message=llm_response)
     return True
         
-    
