@@ -43,7 +43,7 @@ class TeamQuizV2(Game):
                          session_id=session_id)
 
         self.num_of_teams = 0
-        self.rounds = 20
+        self.rounds = 10
         self.current_round = 1
         self.questions_for_game = []
         self.team_points = {}
